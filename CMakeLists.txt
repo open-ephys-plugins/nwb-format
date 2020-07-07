@@ -91,11 +91,6 @@ foreach( src_file IN ITEMS ${SRC_FILES})
 	source_group("${group_name}" FILES "${src_file}")
 endforeach()
 
-#additional libraries needed
-
-
-target_include_directories(${PLUGIN_NAME} PUBLIC ../OpenEphysHDF5Lib/Source)
-
 # Open Ephys common libraries
 include(link_open_ephys_lib.cmake)
 link_open_ephys_lib(${PLUGIN_NAME} OpenEphysHDF5)
