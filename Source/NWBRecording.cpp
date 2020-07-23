@@ -154,6 +154,11 @@
 	 }
 		 
  }
+
+void NWBRecordEngine::writeSynchronizedData(int writeChannel, int realChannel, const float* dataBuffer, const float* ftsBuffer, int size)
+{
+	//empty;
+}
  
 void NWBRecordEngine::writeEvent(int eventIndex, const MidiMessage& event) 
 {
