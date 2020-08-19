@@ -21,10 +21,9 @@ jobs:
         export CXX=g++-8
         cd ../..
         git clone https://github.com/open-ephys/plugin-GUI.git --branch testing
+        sudo ./plugin-GUI/Resources/Scripts/install_linux_dependencies.sh
         cd plugin-GUI/Build && cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release ..
-        cd ../Resources/Scripts
-        sudo ./install_linux_dependencies.sh
-        cd ../../..
+        cd ../..
         mkdir OEPlugins && cd OEPlugins
         git clone https://github.com/open-ephys-plugins/OpenEphysHDF5Lib.git
         cd OpenEphysHDF5Lib/Build

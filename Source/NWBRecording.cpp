@@ -155,7 +155,7 @@
 		 
  }
 
-void NWBRecordEngine::writeSynchronizedData(int writeChannel, int realChannel, const float* dataBuffer, const float* ftsBuffer, int size)
+void NWBRecordEngine::writeSynchronizedData(int writeChannel, int realChannel, const float* dataBuffer, const double* ftsBuffer, int size)
 {
 	//empty;
 }
