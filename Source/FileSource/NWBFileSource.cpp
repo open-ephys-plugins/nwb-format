@@ -45,19 +45,8 @@ bool NWBFileSource::Open(File file)
     try
     {
         tmpFile = new H5File(file.getFullPathName().toUTF8(),H5F_ACC_RDONLY);
-        if (!tmpFile->attrExists("nwb_version"))
-        {
-            return false;
-        }
 
-        ver = tmpFile->openAttribute("nwb_version");
-        ver.read(PredType::NATIVE_UINT16,&vernum);
-        /* TODO: Verify 
-        if ((vernum < MIN_NWB_VERSION) || (vernum > MIN_NWB_VERSION))
-        {
-            return false;
-        }
-        */
+        //TODO: Verify NWBVersion
 
         sourceFile = tmpFile;
         return true;
@@ -84,7 +73,9 @@ void NWBFileSource::fillRecordInfo()
 
     try
     {
-        recordings = sourceFile->openGroup("/recordings");
+        
+        recordings = sourceFile->openGroup("/acquisition/timeseries");
+        
         int numObjs = (int) recordings.getNumObjs();
 
         for (int i=0; i < numObjs; i++)
@@ -95,29 +86,50 @@ void NWBFileSource::fillRecordInfo()
                 DataSet data;
                 Attribute attr;
                 DataSpace dSpace;
-                float sampleRate;
+                float sampleRate = 40000.0f; //NWB doesn't store this?
                 float bitVolts;
                 hsize_t dims[3];
                 RecordInfo info;
 
-                recordN = recordings.openGroup(String(i).toUTF8());
-                data = recordN.openDataSet("data");
-                attr = recordN.openAttribute("sample_rate");
-                attr.read(PredType::NATIVE_FLOAT,&sampleRate);
-                attr = recordN.openAttribute("bit_depth");
-                attr.read(PredType::NATIVE_FLOAT,&bitVolts);
+                recordN = recordings.openGroup("recording1/continuous/processor118_106");
+                data = recordN.openDataSet("data"); 
+
+                attr = data.openAttribute("conversion"); //conversion
+                attr.read(PredType::NATIVE_FLOAT, &bitVolts);
+
+                //attr = recordN.openAttribute("sample_rate");
+                //attr.read(PredType::NATIVE_FLOAT,&sampleRate);
+                //attr = recordN.openAttribute("bit_depth");
+                //attr.read(PredType::NATIVE_FLOAT,&bitVolts);
                 dSpace = data.getSpace();
                 dSpace.getSimpleExtentDims(dims);
 
                 info.name="Record "+String(i);
                 info.numSamples = dims[0];
-                info.sampleRate = sampleRate;
+                info.sampleRate = sampleRate; 
 
-                bool foundBitVoltArray = false;
-                HeapBlock<float> bitVoltArray(dims[1]);
+                std::cout << "Got bitVolts: " << bitVolts << std::endl;
+                std::cout << "Got num samples: " << dims[0] << std::endl;
+                std::cout << "Got num channels: " << dims[1] << std::endl;
+                std::cout << "Got sample rate: " << sampleRate << std::endl;
+
+                //bool foundBitVoltArray = false;
+                //HeapBlock<float> bitVoltArray(dims[1]);
 
                 try
                 {
+                    for (int j = 0; j < dims[1]; j++)
+                    {
+                        RecordedChannelInfo c;
+                        c.name = "CH" + String(j);
+                        c.bitVolts = bitVolts;
+                        info.channels.add(c);
+                    }
+                    infoArray.add(info);
+                    availableDataSets.add(i);
+                    numRecords++;
+
+                    /* 
                     recordN = recordings.openGroup((String(i) + "/application_data").toUTF8());
 					try 
 					{
@@ -135,59 +147,56 @@ void NWBFileSource::fillRecordInfo()
 						attr.read(ArrayType(PredType::NATIVE_FLOAT, 1, &dims[1]), bitVoltArray);
 						foundBitVoltArray = true;
 					}
+                    */
                 } catch (GroupIException)
                 {
+                   std::cout << "!!!GroupIException!!!" << std::endl; 
                 } catch (AttributeIException)
                 {
+                    std::cout << "!!!AttributeIException!!!" << std::endl;
                 }
 
-                for (int j = 0; j < dims[1]; j++)
-                {
-                    RecordedChannelInfo c;
-                    c.name = "CH" + String(j);
-                    
-                    if (foundBitVoltArray)
-                        c.bitVolts = bitVoltArray[j];
-                    else
-                        c.bitVolts = bitVolts;
-
-                    info.channels.add(c);
-                }
-                infoArray.add(info);
-                availableDataSets.add(i);
-                numRecords++;
             }
             catch (GroupIException)
             {
+                std::cout << "!!!GroupIException!!!" << std::endl;
             }
             catch (DataSetIException)
             {
+                std::cout << "!!!DataSetIException!!!" << std::endl;
             }
             catch (AttributeIException)
             {
+                std::cout << "!!!AttributeIException!!!" << std::endl;
             }
             catch (DataSpaceIException error)
             {
+                std::cout << "!!!DataSpaceIException!!!" << std::endl;
                 PROCESS_ERROR;
             }
         }
     }
     catch (FileIException error)
     {
+        std::cout << "!!!FileIException!!!" << std::endl;
         PROCESS_ERROR;
     }
     catch (GroupIException error)
     {
+        std::cout << "!!!GroupIException!!!" << std::endl;
         PROCESS_ERROR;
     }
 }
 
 void NWBFileSource::updateActiveRecord()
 {
+
     samplePos=0;
     try
     {
         String path = "/recordings/" + String(availableDataSets[activeRecord.get()]) + "/data";
+        path = "/acquisition/timeseries/recording1/continuous/processor118_106/data";
+        std::cout << "path: " << path << std::endl;
         dataSet = new DataSet(sourceFile->openDataSet(path.toUTF8()));
     }
     catch (FileIException error)
@@ -207,6 +216,7 @@ void NWBFileSource::seekTo(int64 sample)
 
 int NWBFileSource::readData(int16* buffer, int nSamples)
 {
+
     DataSpace fSpace,mSpace;
     int samplesToRead;
     int nChannels = getActiveNumChannels();
