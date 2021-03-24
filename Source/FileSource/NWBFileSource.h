@@ -61,6 +61,8 @@ private:
     ScopedPointer<H5::H5File> sourceFile;
     ScopedPointer<H5::DataSet> dataSet;
 
+    Array<String> dataPaths;
+
     int64 samplePos;
     Array<int> availableDataSets;
     bool skipRecordEngineCheck;

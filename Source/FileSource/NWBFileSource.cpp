@@ -76,12 +76,15 @@ void NWBFileSource::fillRecordInfo()
         
         recordings = sourceFile->openGroup("/acquisition/timeseries");
         
-        int numObjs = (int) recordings.getNumObjs();
+        int numRecordings = (int) recordings.getNumObjs();
 
-        for (int i=0; i < numObjs; i++)
+        std::cout << "numRecordings = " << numRecordings << std::endl;
+
+        for (int i=0; i < numRecordings; i++)
         {
             try
             {
+
                 Group recordN;
                 DataSet data;
                 Attribute attr;
@@ -89,71 +92,84 @@ void NWBFileSource::fillRecordInfo()
                 float sampleRate = 40000.0f; //NWB doesn't store this?
                 float bitVolts;
                 hsize_t dims[3];
-                RecordInfo info;
 
-                recordN = recordings.openGroup("recording1/continuous/processor118_106");
-                data = recordN.openDataSet("data"); 
+                H5std_string recordingName = recordings.getObjnameByIdx(hsize_t(i));
 
-                attr = data.openAttribute("conversion"); //conversion
-                attr.read(PredType::NATIVE_FLOAT, &bitVolts);
+                String continuousDataPath = (String(recordingName) + "/continuous/");
+                Group continuous = recordings.openGroup(continuousDataPath.toUTF8());
 
-                //attr = recordN.openAttribute("sample_rate");
-                //attr.read(PredType::NATIVE_FLOAT,&sampleRate);
-                //attr = recordN.openAttribute("bit_depth");
-                //attr.read(PredType::NATIVE_FLOAT,&bitVolts);
-                dSpace = data.getSpace();
-                dSpace.getSimpleExtentDims(dims);
-
-                info.name="Record "+String(i);
-                info.numSamples = dims[0];
-                info.sampleRate = sampleRate; 
-
-                std::cout << "Got bitVolts: " << bitVolts << std::endl;
-                std::cout << "Got num samples: " << dims[0] << std::endl;
-                std::cout << "Got num channels: " << dims[1] << std::endl;
-                std::cout << "Got sample rate: " << sampleRate << std::endl;
-
-                //bool foundBitVoltArray = false;
-                //HeapBlock<float> bitVoltArray(dims[1]);
-
-                try
+                for (int j=0; j < (int)continuous.getNumObjs(); j++)
                 {
-                    for (int j = 0; j < dims[1]; j++)
+
+                    RecordInfo info;
+
+                    H5std_string processorName = continuous.getObjnameByIdx(hsize_t(j));
+
+                    recordN = recordings.openGroup((continuousDataPath + String(processorName)).toUTF8());
+                    data = recordN.openDataSet("data"); 
+
+                    attr = data.openAttribute("conversion"); //conversion
+                    attr.read(PredType::NATIVE_FLOAT, &bitVolts);
+
+                    //attr = recordN.openAttribute("sample_rate");
+                    //attr.read(PredType::NATIVE_FLOAT,&sampleRate);
+                    //attr = recordN.openAttribute("bit_depth");
+                    //attr.read(PredType::NATIVE_FLOAT,&bitVolts);
+                    dSpace = data.getSpace();
+                    dSpace.getSimpleExtentDims(dims);
+
+                    info.name = processorName;
+                    info.numSamples = dims[0];
+                    info.sampleRate = sampleRate;
+
+                    std::cout << "Got bitVolts: " << bitVolts << std::endl;
+                    std::cout << "Got num samples: " << dims[0] << std::endl;
+                    std::cout << "Got num channels: " << dims[1] << std::endl;
+                    std::cout << "Got sample rate: " << sampleRate << std::endl;
+
+                    //bool foundBitVoltArray = false;
+                    //HeapBlock<float> bitVoltArray(dims[1]);
+
+                    try
                     {
-                        RecordedChannelInfo c;
-                        c.name = "CH" + String(j);
-                        c.bitVolts = bitVolts;
-                        info.channels.add(c);
-                    }
-                    infoArray.add(info);
-                    availableDataSets.add(i);
-                    numRecords++;
+                        for (int k = 0; k < dims[1]; k++)
+                        {
+                            RecordedChannelInfo c;
+                            c.name = "CH" + String(k);
+                            c.bitVolts = bitVolts;
+                            info.channels.add(c);
+                        }
+                        infoArray.add(info);
+                        availableDataSets.add(j);
+                        dataPaths.set(j, continuousDataPath + String(processorName));
+                        numRecords++;
 
-                    /* 
-                    recordN = recordings.openGroup((String(i) + "/application_data").toUTF8());
-					try 
-					{
-						DataSet bV = recordN.openDataSet("channel_bit_volts");
-						bV.read(bitVoltArray.getData(), PredType::NATIVE_FLOAT);
-						foundBitVoltArray = true;
-					}
-					catch (GroupIException)
-					{ }
-					catch (DataSetIException)
-					{ }
-					if (!foundBitVoltArray)
-					{
-						attr = recordN.openAttribute("channel_bit_volts");
-						attr.read(ArrayType(PredType::NATIVE_FLOAT, 1, &dims[1]), bitVoltArray);
-						foundBitVoltArray = true;
-					}
-                    */
-                } catch (GroupIException)
-                {
-                   std::cout << "!!!GroupIException!!!" << std::endl; 
-                } catch (AttributeIException)
-                {
-                    std::cout << "!!!AttributeIException!!!" << std::endl;
+                        /* 
+                        recordN = recordings.openGroup((String(i) + "/application_data").toUTF8());
+                        try 
+                        {
+                            DataSet bV = recordN.openDataSet("channel_bit_volts");
+                            bV.read(bitVoltArray.getData(), PredType::NATIVE_FLOAT);
+                            foundBitVoltArray = true;
+                        }
+                        catch (GroupIException)
+                        { }
+                        catch (DataSetIException)
+                        { }
+                        if (!foundBitVoltArray)
+                        {
+                            attr = recordN.openAttribute("channel_bit_volts");
+                            attr.read(ArrayType(PredType::NATIVE_FLOAT, 1, &dims[1]), bitVoltArray);
+                            foundBitVoltArray = true;
+                        }
+                        */
+                    } catch (GroupIException)
+                    {
+                    std::cout << "!!!GroupIException!!!" << std::endl; 
+                    } catch (AttributeIException)
+                    {
+                        std::cout << "!!!AttributeIException!!!" << std::endl;
+                    }
                 }
 
             }
@@ -194,8 +210,7 @@ void NWBFileSource::updateActiveRecord()
     samplePos=0;
     try
     {
-        String path = "/recordings/" + String(availableDataSets[activeRecord.get()]) + "/data";
-        path = "/acquisition/timeseries/recording1/continuous/processor118_106/data";
+        String path = "/acquisition/timeseries/" + dataPaths[activeRecord.get()] + "/data";
         std::cout << "path: " << path << std::endl;
         dataSet = new DataSet(sourceFile->openDataSet(path.toUTF8()));
     }
