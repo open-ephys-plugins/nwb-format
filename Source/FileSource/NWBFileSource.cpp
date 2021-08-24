@@ -76,11 +76,9 @@ void NWBFileSource::fillRecordInfo()
         
         recordings = sourceFile->openGroup("/acquisition/timeseries");
         
-        int numRecordings = (int) recordings.getNumObjs();
+        int nRecordings = (int) recordings.getNumObjs();
 
-        std::cout << "numRecordings = " << numRecordings << std::endl;
-
-        for (int i=0; i < numRecordings; i++)
+        for (int i = 0; i < nRecordings; i++)
         {
             try
             {
@@ -89,7 +87,7 @@ void NWBFileSource::fillRecordInfo()
                 DataSet data;
                 Attribute attr;
                 DataSpace dSpace;
-                float sampleRate = 40000.0f; //NWB doesn't store this?
+                float sampleRate = 40000.0f; //TODO: Pull this out from interval
                 float bitVolts;
                 hsize_t dims[3];
 
@@ -98,7 +96,9 @@ void NWBFileSource::fillRecordInfo()
                 String continuousDataPath = (String(recordingName) + "/continuous/");
                 Group continuous = recordings.openGroup(continuousDataPath.toUTF8());
 
-                for (int j=0; j < (int)continuous.getNumObjs(); j++)
+                nProcessors = (int)continuous.getNumObjs();
+
+                for (int j = 0; j < nProcessors; j++)
                 {
 
                     RecordInfo info;
@@ -138,10 +138,10 @@ void NWBFileSource::fillRecordInfo()
                             c.name = "CH" + String(k);
                             c.bitVolts = bitVolts;
                             info.channels.add(c);
-                        }
+                        }   
                         infoArray.add(info);
-                        availableDataSets.add(j);
-                        dataPaths.set(j, continuousDataPath + String(processorName));
+                        availableDataSets.add(numRecords);
+                        dataPaths.set(numRecords, continuousDataPath + String(processorName));
                         numRecords++;
 
                         /* 
@@ -165,7 +165,7 @@ void NWBFileSource::fillRecordInfo()
                         */
                     } catch (GroupIException)
                     {
-                    std::cout << "!!!GroupIException!!!" << std::endl; 
+                        std::cout << "!!!GroupIException!!!" << std::endl; 
                     } catch (AttributeIException)
                     {
                         std::cout << "!!!AttributeIException!!!" << std::endl;
@@ -191,6 +191,8 @@ void NWBFileSource::fillRecordInfo()
                 PROCESS_ERROR;
             }
         }
+
+        std::cout << "Size of dataPaths" << dataPaths.size() << std::endl;
     }
     catch (FileIException error)
     {
@@ -210,6 +212,7 @@ void NWBFileSource::updateActiveRecord()
     samplePos=0;
     try
     {
+        std::cout << "ActiveRecord.get: " << activeRecord.get() << std::endl;
         String path = "/acquisition/timeseries/" + dataPaths[activeRecord.get()] + "/data";
         std::cout << "path: " << path << std::endl;
         dataSet = new DataSet(sourceFile->openDataSet(path.toUTF8()));
@@ -316,3 +319,4 @@ bool NWBFileSource::isReady()
 	else
 		return true;
 }
+

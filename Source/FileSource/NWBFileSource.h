@@ -64,6 +64,8 @@ private:
     Array<String> dataPaths;
 
     int64 samplePos;
+
+    int nProcessors;
     Array<int> availableDataSets;
     bool skipRecordEngineCheck;
 };

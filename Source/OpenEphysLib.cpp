@@ -54,7 +54,6 @@ extern "C" EXPORT int getPluginInfo(int index, Plugin::PluginInfo* info)
 		info->recordEngine.creator = &(Plugin::createRecordEngine<NWBRecording::NWBRecordEngine>);
 		break;
 	case 1:
-		std::cout << "Inside NWBRecording case 1 " << std::endl;
 		info->type = Plugin::PLUGIN_TYPE_FILE_SOURCE;
 		info->fileSource.name = "NWB file";
 		info->fileSource.creator = &(Plugin::createFileSource<NWBFileSource>);
