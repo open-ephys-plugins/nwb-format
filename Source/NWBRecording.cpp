@@ -45,7 +45,7 @@
  {
 	 
 	 //Called when acquisition starts, to open the files
-	 String basepath = rootFolder.getFullPathName() + rootFolder.separatorString + "experiment_" + String(experimentNumber) + ".nwb";
+	 String basepath = rootFolder.getFullPathName() + rootFolder.getSeparatorString() + "experiment_" + String(experimentNumber) + ".nwb";
 	 
 	 recordFile = new NWBFile(basepath, CoreServices::getGUIVersion(), identifierText);
 	 recordFile->setXmlText(getLatestSettingsXml());
@@ -65,18 +65,18 @@
 		 {
 			 int recordedChan = procInfo.recordedChannels[chan];
 			 int realChan = getRealChannel(recordedChan);
-			 const DataChannel* channelInfo = getDataChannel(realChan);
-			 int sourceId = channelInfo->getSourceNodeID();
-			 int sourceSubIdx = channelInfo->getSubProcessorIdx();
+			 const ContinuousChannel* channelInfo = getContinuousChannel(realChan);
+			 int sourceId = channelInfo->getSourceNodeId();
+			 int streamId = channelInfo->getStreamId();
 			 int nInfoArrays = continuousChannels.size();
 			 bool found = false;
 			 for (int i = lastId; i < nInfoArrays; i++)
 			 {
-				 if (sourceId == continuousChannels.getReference(i)[0]->getSourceNodeID() && sourceSubIdx == continuousChannels.getReference(i)[0]->getSubProcessorIdx())
+				 if (sourceId == continuousChannels.getReference(i)[0]->getSourceNodeId() && streamId == continuousChannels.getReference(i)[0]->getStreamId())
 				 {
 					 //A dataset for the current processor from the current source is already present
 					 writeChannelIndexes.set(recordedChan, continuousChannels.getReference(i).size());
-					 continuousChannels.getReference(i).add(getDataChannel(realChan));
+					 continuousChannels.getReference(i).add(getContinuousChannel(realChan));
 					 datasetIndexes.set(recordedChan, i);
 					 found = true;
 					 break;
@@ -85,7 +85,7 @@
 			 if (!found) //a new dataset must be created
 			 {
 				 ContinuousGroup newGroup;
-				 newGroup.add(getDataChannel(realChan));
+				 newGroup.add(getContinuousChannel(realChan));
 				 continuousChannels.add(newGroup);
 				 datasetIndexes.set(recordedChan, nInfoArrays);
 				 writeChannelIndexes.set(recordedChan, 0);
@@ -136,7 +136,7 @@
  void NWBRecordEngine::writeData(int writeChannel, int realChannel, const float* buffer, int size)
  {
 
-	 recordFile->writeData(datasetIndexes[writeChannel], writeChannelIndexes[writeChannel], size, buffer, getDataChannel(realChannel)->getBitVolts());
+	 recordFile->writeData(datasetIndexes[writeChannel], writeChannelIndexes[writeChannel], size, buffer, getContinuousChannel(realChannel)->getBitVolts());
 
 	 /* All channels in a dataset have the same number of samples and share timestamps. But since this method is called 
 		asynchronously, the timestamps might not be in sync during acquisition, so we chose a channel and write the
@@ -144,7 +144,7 @@
 	 if (writeChannelIndexes[writeChannel] == 0)
 	 {
 		 int64 baseTS = getTimestamp(writeChannel);
-		 double fs = getDataChannel(realChannel)->getSampleRate();
+		 double fs = getContinuousChannel(realChannel)->getSampleRate();
 		 //Let's hope that the compiler is smart enough to vectorize this. 
 		 for (int i = 0; i < size; i++)
 		 {
@@ -163,21 +163,21 @@ void NWBRecordEngine::writeSynchronizedData(int writeChannel, int realChannel, c
 void NWBRecordEngine::writeEvent(int eventIndex, const MidiMessage& event) 
 {
 	const EventChannel* channel = getEventChannel(eventIndex);
-	EventPtr eventStruct = Event::deserializeFromMessage(event, channel);
+	EventPtr eventStruct = Event::deserialize(event, channel);
 
 	recordFile->writeEvent(eventIndex, channel, eventStruct);
 }
 
-void NWBRecordEngine::writeTimestampSyncText(uint16 sourceID, uint16 sourceIdx, int64 timestamp, float sourceSampleRate, String text)
+void NWBRecordEngine::writeTimestampSyncText(uint64 streamId, int64 timestamp, float sourceSampleRate, String text)
 {
-	recordFile->writeTimestampSyncText(sourceID, timestamp, sourceSampleRate, text);
+	recordFile->writeTimestampSyncText(streamId, timestamp, sourceSampleRate, text);
 }
 
 void NWBRecordEngine::addSpikeElectrode(int index,const  SpikeChannel* elec) 
 {
 }
 
-void NWBRecordEngine::writeSpike(int electrodeIndex, const SpikeEvent* spike) 
+void NWBRecordEngine::writeSpike(int electrodeIndex, const Spike* spike) 
 {
 	const SpikeChannel* channel = getSpikeChannel(electrodeIndex);
 
@@ -189,7 +189,7 @@ RecordEngineManager* NWBRecordEngine::getEngineManager()
 	//static factory that instantiates the engine manager, which allows to configure recording options among other things. See OriginalRecording to see how to create options for a record engine
 	RecordEngineManager* man = new RecordEngineManager("NWB", "NWB", &(engineFactory<NWBRecordEngine>));
 	EngineParameter* param;
-	param = new EngineParameter(EngineParameter::STR, 0, "Identifier Text", String::empty);
+	param = new EngineParameter(EngineParameter::STR, 0, "Identifier Text", String());
 	man->addParameter(param);
 	return man;
 	

@@ -26,11 +26,13 @@
 
 #include <HDF5FileFormat.h>
 #include <RecordingLib.h>
+#include <ProcessorHeaders.h>
+
 using namespace OpenEphysHDF5;
 
 namespace NWBRecording
 {
-	typedef Array<const DataChannel*> ContinuousGroup;
+	typedef Array<const ContinuousChannel*> ContinuousGroup;
 	class TimeSeries
 	{
 	public:
@@ -53,7 +55,7 @@ namespace NWBRecording
 		void stopRecording();
 		void writeData(int datasetID, int channel, int nSamples, const float* data, float bitVolts);
 		void writeTimestamps(int datasetID, int nSamples, const double* data);
-		void writeSpike(int electrodeId, const SpikeChannel* channel, const SpikeEvent* event);
+		void writeSpike(int electrodeId, const SpikeChannel* channel, const Spike* event);
 		void writeEvent(int eventID, const EventChannel* channel, const Event* event);
 		void writeTimestampSyncText(uint16 sourceID, int64 timestamp, float sourceSampleRate, String text);
 		String getFileName() override;
@@ -66,17 +68,17 @@ namespace NWBRecording
 
 		void createTextDataSet(String path, String name, String text);
 		void createBinaryDataSet(String path, String name, HDF5FileBase::BaseDataType type, int length, void* data);
-		static HDF5FileBase::BaseDataType getEventH5Type(EventChannel::EventChannelTypes type, int length = 1);
-		static HDF5FileBase::BaseDataType getMetaDataH5Type(MetaDataDescriptor::MetaDataTypes type, int length = 1);
+		static HDF5FileBase::BaseDataType getEventH5Type(EventChannel::Type type, int length = 1);
+		static HDF5FileBase::BaseDataType getMetadataH5Type(MetadataDescriptor::MetadataTypes type, int length = 1);
 
 		bool createTimeSeriesBase(String basePath, String source, String helpText, String description, StringArray ancestry);
 		bool createExtraInfo(String basePath, String name, String desc, String id, uint16 index, uint16 typeIndex);
 		HDF5RecordingData* createTimestampDataSet(String basePath, int chunk_size);
 		void createDataAttributes(String basePath, float conversion, float resolution, String unit);
-		bool createChannelMetaDataSets(String basePath, const MetaDataInfoObject* info);
-		bool createEventMetaDataSets(String basePath, TimeSeries* timeSeries, const MetaDataEventObject* info);
+		bool createChannelMetadataSets(String basePath, const MetadataObject* info);
+		bool createEventMetadataSets(String basePath, TimeSeries* timeSeries, const MetadataEventObject* info);
 
-		void writeEventMetaData(TimeSeries* timeSeries, const MetaDataEventObject* info, const MetaDataEvent* event);
+		void writeEventMetadata(TimeSeries* timeSeries, const MetadataEventObject* info, const MetadataEvent* event);
 		
 
 		const String filename;

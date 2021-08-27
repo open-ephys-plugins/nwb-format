@@ -22,6 +22,7 @@
  */
  
  #include "NWBFormat.h"
+ 
  using namespace NWBRecording;
 
 #ifndef EVENT_CHUNK_SIZE
@@ -117,13 +118,13 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 	 {
 		 //All channels in a group will share the same source information (any caller to this method MUST assure this happen
 		 //so we just pick the first channel.
-		 const DataChannel* info = continuousArray.getReference(i)[0];
-		 basePath = rootPath + "/continuous/processor" + String(info->getCurrentNodeID()) + "_" + String(info->getSourceNodeID());
-		 if (info->getSourceSubprocessorCount() > 1) basePath += "." + String(info->getSubProcessorIdx());
-		 String name = info->getCurrentNodeName() + " (" + String(info->getCurrentNodeID()) + ") From " + info->getSourceName() + " (" + String(info->getSourceNodeID());
-		 if (info->getSourceSubprocessorCount() > 1) name += "." + String(info->getSubProcessorIdx());
-		 name += ")";
+		 const ContinuousChannel* info = continuousArray.getReference(i)[0];
+		 basePath = rootPath + "/continuous/processor" + String(info->getNodeId()) + "_" + String(info->getStreamId());
+		 //if (info->getSourceSubprocessorCount() > 1) basePath += "." + String(info->getSubProcessorIdx());
+		 String name = info->getNodeName() + " (" + String(info->getNodeId()) + ") From " + info->getSourceNodeName() + " (" + String(info->getSourceNodeId());
+		 name += "." + String(info->getStreamId());
 		 ancestry.clearQuick();
+		 name += ")";
 		 ancestry.add("Timeseries");
 		 ancestry.add("ElectricalSeries");
 		 if (!createTimeSeriesBase(basePath, name, "Stores acquired voltage data from extracellular recordings", "", ancestry)) return false;
@@ -137,7 +138,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		 }
 		 else
 		 {
-			 createDataAttributes(basePath, info->getBitVolts(), info->getBitVolts() / 65536, info->getDataUnits());
+			 createDataAttributes(basePath, info->getBitVolts(), info->getBitVolts() / 65536, info->getUnits());
 		 }
 		 tsStruct->baseDataSet = dSet;
 
@@ -151,9 +152,9 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		 for (int j = 0; j < nChans; j++)
 		 {
 			 String channelPath = basePath + "/channel" + String(j + 1);
-			 const DataChannel* chan = continuousArray.getReference(i)[j];
-			 createExtraInfo(channelPath, chan->getName(), chan->getDescription(), chan->getIdentifier(), chan->getSourceIndex(), chan->getSourceTypeIndex());
-			 createChannelMetaDataSets(channelPath + "/channel_metadata", chan);
+			 const ContinuousChannel* chan = continuousArray.getReference(i)[j];
+			 createExtraInfo(channelPath, chan->getName(), chan->getDescription(), chan->getIdentifier(), chan->getLocalIndex(), chan->getChannelType());
+			 createChannelMetadataSets(channelPath + "/channel_metadata", chan);
 		 }
 		 continuousDataSets.add(tsStruct.release());
 	 }		 
@@ -163,8 +164,8 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 	 {
 		 basePath = rootPath + "/spikes/electrode" + String(i + 1);
 		 const SpikeChannel* info = electrodeArray[i];
-		 String sourceName = info->getSourceName() + "_" + String(info->getSourceNodeID());
-		 if (info->getSourceSubprocessorCount() > 1) sourceName = sourceName + "." + String(info->getSubProcessorIdx());
+		 String sourceName = info->getSourceNodeName() + "_" + String(info->getSourceNodeId());
+		 sourceName = sourceName + "." + String(info->getStreamId());
 		 ancestry.clearQuick();
 		 ancestry.add("Timeseries");
 		 ancestry.add("SpikeEventSeries");
@@ -189,9 +190,9 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		 tsStruct->timestampDataSet = dSet;
 
 		 basePath = basePath + "/oe_extra_info";
-		 createExtraInfo(basePath, info->getName(), info->getDescription(), info->getIdentifier(), info->getSourceIndex(), info->getSourceTypeIndex());
-		 createChannelMetaDataSets(basePath + "/channel_metadata", info);
-		 createEventMetaDataSets(basePath + "/spike_metadata", tsStruct, info);
+		 createExtraInfo(basePath, info->getName(), info->getDescription(), info->getIdentifier(), info->getLocalIndex(), info->getChannelType());
+		 createChannelMetadataSets(basePath + "/channel_metadata", info);
+		 createEventMetadataSets(basePath + "/spike_metadata", tsStruct, info);
 
 		 spikeDataSets.add(tsStruct.release());
 
@@ -206,14 +207,14 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 	 {
 		 basePath = rootPath + "/events";
 		 const EventChannel* info = eventArray[i];
-		 String sourceName = info->getSourceName() + "_" + String(info->getSourceNodeID());
-		 if (info->getSourceSubprocessorCount() > 1) sourceName = sourceName + "." + String(info->getSubProcessorIdx());
+		 String sourceName = info->getSourceNodeName() + "_" + String(info->getSourceNodeId());
+		 sourceName = sourceName + "." + String(info->getStreamId());
 		 ancestry.clearQuick();
 		 ancestry.add("Timeseries");
 
 		 String helpText;
 
-		 switch (info->getChannelType())
+		 switch (info->getType())
 		 {
 		 case EventChannel::TTL:
 			 nTTL += 1;
@@ -241,13 +242,13 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		 tsStruct = new TimeSeries();
 		 tsStruct->basePath = basePath;
 
-		 if (info->getChannelType() >= EventChannel::BINARY_BASE_VALUE) //only binary events have length greater than 1
+		 if (info->getType() >= EventChannel::BinaryDataType::BINARY_BASE_VALUE) //only binary events have length greater than 1
 		 {
-			 dSet = createDataSet(getEventH5Type(info->getChannelType(), info->getLength()), 0, info->getLength(), EVENT_CHUNK_SIZE, basePath + "/data");;
+			 dSet = createDataSet(getEventH5Type(info->getType(), info->getLength()), 0, info->getLength(), EVENT_CHUNK_SIZE, basePath + "/data");;
 		 }
 		 else
 		 {
-			 dSet = createDataSet(getEventH5Type(info->getChannelType(), info->getLength()), 0, EVENT_CHUNK_SIZE, basePath + "/data");
+			 dSet = createDataSet(getEventH5Type(info->getType(), info->getLength()), 0, EVENT_CHUNK_SIZE, basePath + "/data");
 		 }
 
 		 if (dSet == nullptr)
@@ -270,7 +271,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		 if (dSet == nullptr) return false;
 		 tsStruct->controlDataSet = dSet;
 
-		 if (info->getChannelType() == EventChannel::TTL)
+		 if (info->getType() == EventChannel::TTL)
 		 {
 			 dSet = createDataSet(BaseDataType::U8, 0, info->getDataSize(), EVENT_CHUNK_SIZE, basePath + "/full_word");
 			 if (dSet == nullptr) return false;
@@ -278,9 +279,9 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		 }
 
 		 basePath = basePath + "/oe_extra_info";
-		 createExtraInfo(basePath, info->getName(), info->getDescription(), info->getIdentifier(), info->getSourceIndex(), info->getSourceTypeIndex());
-		 createChannelMetaDataSets(basePath + "/channel_metadata", info);
-		 createEventMetaDataSets(basePath + "/event_metadata", tsStruct, info);
+		 createExtraInfo(basePath, info->getName(), info->getDescription(), info->getIdentifier(), info->getLocalIndex(), info->getType());
+		 createChannelMetadataSets(basePath + "/channel_metadata", info);
+		 createEventMetadataSets(basePath + "/event_metadata", tsStruct, info);
 		 eventDataSets.add(tsStruct.release());
 
 	 }
@@ -382,7 +383,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 	 CHECK_ERROR(continuousDataSets[datasetID]->timestampDataSet->writeDataBlock(nSamples, BaseDataType::F64, data));
  }
 
- void NWBFile::writeSpike(int electrodeId, const SpikeChannel* channel, const SpikeEvent* event)
+ void NWBFile::writeSpike(int electrodeId, const SpikeChannel* channel, const Spike* event)
  {
 	 if (!spikeDataSets[electrodeId])
 		 return;
@@ -404,7 +405,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 
 	 CHECK_ERROR(spikeDataSets[electrodeId]->baseDataSet->writeDataBlock(1, BaseDataType::I16, intBuffer));
 	 CHECK_ERROR(spikeDataSets[electrodeId]->timestampDataSet->writeDataBlock(1, BaseDataType::F64, &timestampSec));
-	 writeEventMetaData(spikeDataSets[electrodeId], channel, event);
+	 writeEventMetadata(spikeDataSets[electrodeId], channel, event);
 
 	 spikeDataSets[electrodeId]->numSamples += 1;
 
@@ -423,7 +424,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 	 switch (event->getEventType())
 	 {
 	 case EventChannel::TTL:
-		 ttlVal = (static_cast<const TTLEvent*>(event)->getState() ? 1 : -1) * (event->getChannel() + 1);
+		 ttlVal = (static_cast<const TTLEvent*>(event)->getState() ? 1 : -1) * (static_cast<const TTLEvent*>(event)->getBit() + 1);
 		 dataSrc = &ttlVal;
 		 type = BaseDataType::I8;
 		 break;
@@ -443,13 +444,11 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 
 	 CHECK_ERROR(eventDataSets[eventID]->timestampDataSet->writeDataBlock(1, BaseDataType::F64, &timeSec));
 
-	 uint8 controlValue = event->getChannel() + 1;
-
-	 CHECK_ERROR(eventDataSets[eventID]->controlDataSet->writeDataBlock(1, BaseDataType::U8, &controlValue));
-
 	 if (event->getEventType() == EventChannel::TTL)
 	 {
-		 CHECK_ERROR(eventDataSets[eventID]->ttlWordDataSet->writeDataBlock(1, BaseDataType::U8, static_cast<const TTLEvent*>(event)->getTTLWordPointer()));
+		uint8 controlValue = static_cast<const TTLEvent*>(event)->getBit() + 1;
+	 	CHECK_ERROR(eventDataSets[eventID]->controlDataSet->writeDataBlock(1, BaseDataType::U8, &controlValue));
+		CHECK_ERROR(eventDataSets[eventID]->ttlWordDataSet->writeDataBlock(1, BaseDataType::U8, static_cast<const TTLEvent*>(event)->getRawDataPointer()));
 	 }
 	 
 	 eventDataSets[eventID]->numSamples += 1;
@@ -515,24 +514,24 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 	  return true;
   }
 
-  bool NWBFile::createChannelMetaDataSets(String basePath, const MetaDataInfoObject* info)
+  bool NWBFile::createChannelMetadataSets(String basePath, const MetadataObject* info)
   {
 	  if (!info) return false;
 	  if (createGroup(basePath)) return false;
 	  CHECK_ERROR(setAttributeStr("openephys:<metadata>/", basePath, "schema_id"));
-	  int nMetaData = info->getMetaDataCount();
+	  int nMetadata = info->getMetadataCount();
 	  
-	  for (int i = 0; i < nMetaData; i++)
+	  for (int i = 0; i < nMetadata; i++)
 	  {
-		  const MetaDataDescriptor* desc = info->getMetaDataDescriptor(i);
+		  const MetadataDescriptor* desc = info->getMetadataDescriptor(i);
 		  String fieldName = "Field_" + String(i+1);
 		  String name = desc->getName();
 		  String description = desc->getDescription();
 		  String identifier = desc->getIdentifier();
-		  BaseDataType type = getMetaDataH5Type(desc->getType(), desc->getLength()); //only string types use length, for others is always set to 1. If array types are implemented, change this
-		  int length = desc->getType() == MetaDataDescriptor::CHAR ? 1 : desc->getLength(); //strings are a single element of length set in the type (see above) while other elements are saved a
+		  BaseDataType type = getMetadataH5Type(desc->getType(), desc->getLength()); //only string types use length, for others is always set to 1. If array types are implemented, change this
+		  int length = desc->getType() == MetadataDescriptor::CHAR ? 1 : desc->getLength(); //strings are a single element of length set in the type (see above) while other elements are saved a
 		  HeapBlock<char> data(desc->getDataSize());
-		  info->getMetaDataValue(i)->getValue(static_cast<void*>(data.getData()));
+		  info->getMetadataValue(i)->getValue(static_cast<void*>(data.getData()));
 		  createBinaryDataSet(basePath, fieldName, type, length, data.getData());
 		  String fullPath = basePath + "/" + fieldName;
 		  CHECK_ERROR(setAttributeStr("openephys:<metadata>/", fullPath, "schema_id"));
@@ -544,23 +543,23 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
   }
 
  
-  bool NWBFile::createEventMetaDataSets(String basePath, TimeSeries* timeSeries, const MetaDataEventObject* info)
+  bool NWBFile::createEventMetadataSets(String basePath, TimeSeries* timeSeries, const MetadataEventObject* info)
   {
 	  if (!info) return false;
 	  if (createGroup(basePath)) return false;
 	  CHECK_ERROR(setAttributeStr("openephys:<metadata>/", basePath, "schema_id"));
-	  int nMetaData = info->getEventMetaDataCount();
+	  int nMetadata = info->getEventMetadataCount();
 
 	  timeSeries->metaDataSet.clear(); //just in case
-	  for (int i = 0; i < nMetaData; i++)
+	  for (int i = 0; i < nMetadata; i++)
 	  {
-		  const MetaDataDescriptor* desc = info->getEventMetaDataDescriptor(i);
+		  const MetadataDescriptor* desc = info->getEventMetadataDescriptor(i);
 		  String fieldName = "Field_" + String(i+1);
 		  String name = desc->getName();
 		  String description = desc->getDescription();
 		  String identifier = desc->getIdentifier();
-		  BaseDataType type = getMetaDataH5Type(desc->getType(), desc->getLength()); //only string types use length, for others is always set to 1. If array types are implemented, change this
-		  int length = desc->getType() == MetaDataDescriptor::CHAR ? 1 : desc->getLength(); //strings are a single element of length set in the type (see above) while other elements are saved as arrays
+		  BaseDataType type = getMetadataH5Type(desc->getType(), desc->getLength()); //only string types use length, for others is always set to 1. If array types are implemented, change this
+		  int length = desc->getType() == MetadataDescriptor::CHAR ? 1 : desc->getLength(); //strings are a single element of length set in the type (see above) while other elements are saved as arrays
 		  String fullPath = basePath + "/" + fieldName;
 		  HDF5RecordingData* dSet = createDataSet(type, 0, length, EVENT_CHUNK_SIZE, fullPath);
 		  if (!dSet) return false;
@@ -574,15 +573,15 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
       return true;
   }
 
-  void NWBFile::writeEventMetaData(TimeSeries* timeSeries, const MetaDataEventObject* info, const MetaDataEvent* event)
+  void NWBFile::writeEventMetadata(TimeSeries* timeSeries, const MetadataEventObject* info, const MetadataEvent* event)
   {
 	  jassert(timeSeries->metaDataSet.size() == event->getMetadataValueCount());
-	  jassert(info->getEventMetaDataCount() == event->getMetadataValueCount());
-	  int nMetaData = event->getMetadataValueCount();
-	  for (int i = 0; i < nMetaData; i++)
+	  jassert(info->getEventMetadataCount() == event->getMetadataValueCount());
+	  int nMetadata = event->getMetadataValueCount();
+	  for (int i = 0; i < nMetadata; i++)
 	  {
-		  BaseDataType type = getMetaDataH5Type(info->getEventMetaDataDescriptor(i)->getType(), info->getEventMetaDataDescriptor(i)->getLength());
-		  timeSeries->metaDataSet[i]->writeDataBlock(1, type, event->getMetaDataValue(i)->getRawValuePointer());
+		  BaseDataType type = getMetadataH5Type(info->getEventMetadataDescriptor(i)->getType(), info->getEventMetadataDescriptor(i)->getLength());
+		  timeSeries->metaDataSet[i]->writeDataBlock(1, type, event->getMetadataValue(i)->getRawValuePointer());
 	  }
 
   }
@@ -612,7 +611,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 
   //These two methods whould be easy to adapt to support array types for all base types, for now
   //length is only used for string types.
-  NWBFile::BaseDataType NWBFile::getEventH5Type(EventChannel::EventChannelTypes type, int length)
+  NWBFile::BaseDataType NWBFile::getEventH5Type(EventChannel::Type type, int length)
   {
 	  switch (type)
 	  {
@@ -642,31 +641,31 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		  return BaseDataType::I8;
 	  }
   }
-  NWBFile::BaseDataType NWBFile::getMetaDataH5Type(MetaDataDescriptor::MetaDataTypes type, int length)
+  NWBFile::BaseDataType NWBFile::getMetadataH5Type(MetadataDescriptor::MetadataTypes type, int length)
   {
 	  switch (type)
 	  {
-	  case MetaDataDescriptor::INT8:
+	  case MetadataDescriptor::INT8:
 		  return BaseDataType::I8;
-	  case MetaDataDescriptor::UINT8:
+	  case MetadataDescriptor::UINT8:
 		  return BaseDataType::U8;
-	  case MetaDataDescriptor::INT16:
+	  case MetadataDescriptor::INT16:
 		  return BaseDataType::I16;
-	  case MetaDataDescriptor::UINT16:
+	  case MetadataDescriptor::UINT16:
 		  return BaseDataType::U16;
-	  case MetaDataDescriptor::INT32:
+	  case MetadataDescriptor::INT32:
 		  return BaseDataType::I32;
-	  case MetaDataDescriptor::UINT32:
+	  case MetadataDescriptor::UINT32:
 		  return BaseDataType::U32;
-	  case MetaDataDescriptor::INT64:
+	  case MetadataDescriptor::INT64:
 		  return BaseDataType::I64;
-	  case MetaDataDescriptor::UINT64:
+	  case MetadataDescriptor::UINT64:
 		  return BaseDataType::U64;
-	  case MetaDataDescriptor::FLOAT:
+	  case MetadataDescriptor::FLOAT:
 		  return BaseDataType::F32;
-	  case MetaDataDescriptor::DOUBLE:
+	  case MetadataDescriptor::DOUBLE:
 		  return BaseDataType::F64;
-	  case MetaDataDescriptor::CHAR:
+	  case MetadataDescriptor::CHAR:
 		  return BaseDataType::STR(length);
 	  default:
 		  return BaseDataType::I8;
