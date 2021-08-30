@@ -71,7 +71,7 @@ int NWBFile::createFileStructure()
 	if (createGroup("/processing")) return -1;
 	if (createGroup("/specifications")) return -1;
 
-	if (createGroup("/acquisition/timeseries")) return -1;
+	//if (createGroup("/acquisition/timeseries")) return -1;
 
 	//start NWB2 changes
 	//if (createGroup("general/data_collection")) return -1
@@ -124,15 +124,24 @@ int NWBFile::createFileStructure()
 bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup>& continuousArray,
 	const Array<const EventChannel*>& eventArray, const Array<const SpikeChannel*>& electrodeArray)
 {
+
+	String rootPath = "/acquisition/";
+	if (createGroupIfDoesNotExist(rootPath + "/spikes"))
+		return false;
+	if (createGroupIfDoesNotExist(rootPath + "/events"))
+		return false;
+	
 	 //Created each time a new recording is started. Creates the specific file structures and attributes
 	 //for that specific recording
 	 String basePath;
 	 StringArray ancestry;
+	 /*
 	 String rootPath = "/acquisition/timeseries/recording" + String(recordingNumber + 1);
 	 if (createGroup(rootPath)) return false;
 	 if (createGroupIfDoesNotExist(rootPath + "/continuous")) return false;
 	 if (createGroupIfDoesNotExist(rootPath + "/spikes")) return false;
 	 if (createGroupIfDoesNotExist(rootPath + "/events")) return false;
+	 */
 
 	 //just in case
 	 continuousDataSets.clearQuick(true);
@@ -151,6 +160,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		 //All channels in a group will share the same source information (any caller to this method MUST assure this happen
 		 //so we just pick the first channel.
 		 const ContinuousChannel* info = continuousArray.getReference(i)[0];
+		 /*
 		 basePath = rootPath + "/continuous/processor" + String(info->getNodeId()) + "_" + String(info->getStreamId());
 		 //if (info->getSourceSubprocessorCount() > 1) basePath += "." + String(info->getSubProcessorIdx());
 		 String name = info->getNodeName() + " (" + String(info->getNodeId()) + ") From " + info->getSourceNodeName() + " (" + String(info->getSourceNodeId());
@@ -160,12 +170,17 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		 ancestry.add("Timeseries");
 		 ancestry.add("ElectricalSeries");
 		 if (!createTimeSeriesBase(basePath, name, "Stores acquired voltage data from extracellular recordings", "", ancestry)) return false;
+		 */
+		String desc = "stream" + String(info->getNodeId() + "_" + String(info->getSourceNodeId() + "." + String(info->getStreamId())));
+		basePath = rootPath + desc;
+		if (!createTimeSeriesBase(basePath, "Stores acquired colate data from extracellular recordings", "", ancestry)) return false;
+		 
 		 tsStruct = new TimeSeries();
 		 tsStruct->basePath = basePath;
 		 dSet = createDataSet(BaseDataType::I16, 0, continuousArray.getReference(i).size(), CHUNK_XSIZE, basePath + "/data");
 		 if (dSet == nullptr)
 		 {
-			 std::cerr << "Error creating dataset for " << name << std::endl;
+			 std::cerr << "Error creating dataset for " << desc << std::endl;
 			 return false;
 		 }
 		 else
@@ -177,6 +192,10 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		 dSet = createTimestampDataSet(basePath, CHUNK_XSIZE);
 		 if (dSet == nullptr) return false;
 		 tsStruct->timestampDataSet = dSet;
+
+		 dSet = createElectrodeDataSet(basePath, desc, CHUNK_XSIZE);
+		 if (dSet == nullptr) return false;
+		 tsStruct->electrodeDataSet = dSet;
 
 		//TODO: Where does this go in 2.0 format? P.K.
 		 /*
@@ -204,7 +223,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		 ancestry.clearQuick();
 		 ancestry.add("Timeseries");
 		 ancestry.add("SpikeEventSeries");
-		 if (!createTimeSeriesBase(basePath, sourceName, "Snapshots of spike events from data", info->getName(), ancestry)) return false;
+		 if (!createTimeSeriesBase(basePath, "Snapshots of spike events from data", "SpikeEventSeries")) return false;
 
 		 tsStruct = new TimeSeries();
 		 tsStruct->basePath = basePath;
@@ -244,35 +263,45 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		 const EventChannel* info = eventArray[i];
 		 String sourceName = info->getSourceNodeName() + "_" + String(info->getSourceNodeId());
 		 sourceName = sourceName + "." + String(info->getStreamId());
+		 /*
 		 ancestry.clearQuick();
 		 ancestry.add("Timeseries");
+		 */
+
+		 String series;
 
 		 String helpText;
 
 		 switch (info->getType())
-		 {
+		 {	
 		 case EventChannel::TTL:
 			 nTTL += 1;
 			 basePath = basePath + "/ttl" + String(nTTL);
+			 /*
 			 ancestry.add("IntervalSeries");
 			 ancestry.add("TTLSeries");
+			 */
+			series = "IntervalSeries";
 			 helpText = "Stores the start and stop times for TTL events";
 			 break;
 		 case EventChannel::TEXT:
 			 nTXT += 1;
 			 basePath = basePath + "/text" + String(nTXT);
-			 ancestry.add("AnnotationSeries");
+			 //ancestry.add("AnnotationSeries");
+			 series = "AnnotationSeries";
 			 helpText = "Time-stamped annotations about an experiment";
 			 break;
 		 default:
 			 nBIN += 1;
 			 basePath = basePath + "/binary" + String(nBIN);
-			 ancestry.add("BinarySeries");
+			 //ancestry.add("BinarySeries");
+			 series = "IntervalSeries";
 			 helpText = "Stores arbitrary binary data";
 			 break;
 		 }
 
-		 if (!createTimeSeriesBase(basePath, sourceName, helpText, info->getDescription(), ancestry)) return false;
+		 //if (!createTimeSeriesBase(basePath, sourceName, helpText, info->getDescription(), ancestry)) return false;
+		 if (!createTimeSeriesBase(basePath, helpText, series)) return false;
 
 		 tsStruct = new TimeSeries();
 		 tsStruct->basePath = basePath;
@@ -325,7 +354,8 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 	 ancestry.add("Timeseries");
 	 ancestry.add("AnnotationSeries");
 	 String desc = "Stores recording start timestamps for each processor in text format";
-	 if (!createTimeSeriesBase(basePath, "Autogenerated messages", desc, desc, ancestry)) return false;
+	 //if (!createTimeSeriesBase(basePath, "Autogenerated messages", desc, desc, ancestry)) return false;
+	 if (!createTimeSeriesBase(basePath, "Autogenerated messages", "AnnotationSeries")) return false;
 	 tsStruct = new TimeSeries();
 	 tsStruct->basePath = basePath;
 	 dSet = createDataSet(BaseDataType::STR(100), 0, 1, basePath + "/data");
@@ -504,15 +534,17 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 	 return filename;
  }
 
-  bool NWBFile::createTimeSeriesBase(String basePath, String source, String helpText, String description, StringArray ancestry)
+  bool NWBFile::createTimeSeriesBase(String basePath, String description, String neurodata_type)
  {
 	 if (createGroup(basePath)) return false;
-	 CHECK_ERROR(setAttributeStrArray(ancestry, basePath, "ancestry"));
+	 //CHECK_ERROR(setAttributeStrArray(ancestry, basePath, "ancestry"));
 	 CHECK_ERROR(setAttributeStr(" ", basePath, "comments"));
 	 CHECK_ERROR(setAttributeStr(description, basePath, "description"));
-	 CHECK_ERROR(setAttributeStr("TimeSeries", basePath, "neurodata_type"));
-	 CHECK_ERROR(setAttributeStr(source, basePath, "source"));
-	 CHECK_ERROR(setAttributeStr(helpText, basePath, "help"));
+	 //CHECK_ERROR(setAttributeStr("TimeSeries", basePath, "neurodata_type"));
+	 //CHECK_ERROR(setAttributeStr(source, basePath, "source"));
+	 //CHECK_ERROR(setAttributeStr(helpText, basePath, "help"));
+	 CHECK_ERROR(setAttributeStr("core", basePath, "namespace"));
+	 CHECK_ERROR(setAttributeStr(neurodata_type, basePath, "neurodata_type"));
 	 return true;
  }
 
@@ -536,6 +568,21 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 	  }
 	  return tsSet;
   }
+
+  HDF5RecordingData *NWBFile::createElectrodeDataSet(String basePath, String description, int chunk_size)
+{
+	HDF5RecordingData *elSet = createDataSet(BaseDataType::F64, 1, chunk_size, basePath + "/electrodes");
+	if (!elSet)
+		std::cerr << "Error creating electrode dataset in " << basePath << std::endl;
+	else
+	{
+		CHECK_ERROR(setAttributeStr(description, basePath + "/electrodes", "description"));
+		CHECK_ERROR(setAttributeStr("hdmf-common", basePath + "/electrodes", "namespace"));
+		CHECK_ERROR(setAttributeStr("DynamicTableRegion", basePath + "/electrodes", "neurodata_type"));
+		//TODO: object_id(uuid), table
+	}
+	return elSet;
+}
 
   bool NWBFile::createExtraInfo(String basePath, String name, String desc, String id, uint16 index, uint16 typeIndex)
   {
