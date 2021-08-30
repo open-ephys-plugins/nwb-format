@@ -128,8 +128,10 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 	String rootPath = "/acquisition/";
 	if (createGroupIfDoesNotExist(rootPath + "/spikes"))
 		return false;
+	/*
 	if (createGroupIfDoesNotExist(rootPath + "/events"))
 		return false;
+	*/
 	
 	 //Created each time a new recording is started. Creates the specific file structures and attributes
 	 //for that specific recording
@@ -259,10 +261,13 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 	 int nBIN = 0;
 	 for (int i = 0; i < nCont; i++)
 	 {
-		 basePath = rootPath + "/events";
+		 //basePath = rootPath + "/events";
 		 const EventChannel* info = eventArray[i];
 		 String sourceName = info->getSourceNodeName() + "_" + String(info->getSourceNodeId());
 		 sourceName = sourceName + "." + String(info->getStreamId());
+
+		 basePath = rootPath + sourceName + "_events";
+
 		 /*
 		 ancestry.clearQuick();
 		 ancestry.add("Timeseries");
@@ -276,7 +281,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		 {	
 		 case EventChannel::TTL:
 			 nTTL += 1;
-			 basePath = basePath + "/ttl" + String(nTTL);
+			 //basePath = basePath + "/ttl" + String(nTTL);
 			 /*
 			 ancestry.add("IntervalSeries");
 			 ancestry.add("TTLSeries");
@@ -286,14 +291,14 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 			 break;
 		 case EventChannel::TEXT:
 			 nTXT += 1;
-			 basePath = basePath + "/text" + String(nTXT);
+			 //basePath = basePath + "/text" + String(nTXT);
 			 //ancestry.add("AnnotationSeries");
 			 series = "AnnotationSeries";
 			 helpText = "Time-stamped annotations about an experiment";
 			 break;
 		 default:
 			 nBIN += 1;
-			 basePath = basePath + "/binary" + String(nBIN);
+			 //basePath = basePath + "/binary" + String(nBIN);
 			 //ancestry.add("BinarySeries");
 			 series = "IntervalSeries";
 			 helpText = "Stores arbitrary binary data";
@@ -349,7 +354,8 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		 eventDataSets.add(tsStruct.release());
 
 	 }
-	 basePath = rootPath + "/events/sync_messages";
+	 //basePath = rootPath + "/events/sync_messages";
+	 basePath = rootPath + "sync_messages";
 	 ancestry.clearQuick();
 	 ancestry.add("Timeseries");
 	 ancestry.add("AnnotationSeries");
