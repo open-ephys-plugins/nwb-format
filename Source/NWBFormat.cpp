@@ -69,31 +69,61 @@ int NWBFile::createFileStructure()
 	if (createGroup("/epochs")) return -1;
 	if (createGroup("/general")) return -1;
 	if (createGroup("/processing")) return -1;
-	if (createGroup("/stimulus")) return -1;
+	if (createGroup("/specifications")) return -1;
 
 	if (createGroup("/acquisition/timeseries")) return -1;
 
+	//start NWB2 changes
+	//if (createGroup("general/data_collection")) return -1
+	if (createGroup("general/LabMetaData")) return -1;
+	if (createGroup("general/devices")) return -1;
+	if (createGroup("general/extracellular_ephys")) return -1;
+	if (createGroup("general/extracellular_ephys/electrodes")) return -1;
 
-	if (createGroup("/general/data_collection")) return -1;
+	if (createGroup("general/subject")) return -1;
+
+	createTextDataSet("general", "experiment_description", " ");
+	createTextDataSet("general", "experimenter", " ");
+	createTextDataSet("general", "institution", " ");
+	createTextDataSet("general", "lab", " ");
+	createTextDataSet("general", "surgery", " ");
+
+	createTextDataSet("general/subject", "date_of_birth", " ");
+	createTextDataSet("general/subject", "description", " ");
+	createTextDataSet("general/subject", "genotype", " ");
+	createTextDataSet("general/subject", "sex", " ");
+	createTextDataSet("general/subject", "species", " ");
+	createTextDataSet("general/subject", "subject_id", " ");
+	createTextDataSet("general/subject", "weight", " ");
 
 	CHECK_ERROR(setAttributeStr(String("OpenEphys GUI v") + GUIVersion, "/general/data_collection", "software"));
 	CHECK_ERROR(setAttributeStr(*xmlText, "/general/data_collection", "configuration"));
-	
-	//TODO: Add default datasets
-	//Modify this one once we have JUCE4 to allow UTC time 
-	String time = Time::getCurrentTime().formatted("%Y-%m-%dT%H:%M:%S");
+
+	String time = Time::getCurrentTime().formatted("%Y-%m-%dT%H:%M:%S") + Time::getCurrentTime().getUTCOffsetString(true);
 	createTextDataSet("", "file_create_date", time);
 	createTextDataSet("", "identifier", identifierText);
-	createTextDataSet("", "nwb_version", "NWB-1.0.6");
+	//createTextDataSet("", "nwb_version", "NWB-1.0.6");
 	createTextDataSet("", "session_description", " ");
 	createTextDataSet("", "session_start_time", time);
+
+	createTextDataSet("", "timestamps_reference_time", time);
 	
+	/* Specifications */
+	//TODO
+
+	/* Stimulus */
+	if (createGroup("/stimulus")) return -1;
+
+	if (createGroup("/stimulus/presentation")) return -1;
+	if (createGroup("/stimulus/templates")) return -1;
+
 	return 0;
+
 }
  
 bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup>& continuousArray,
 	const Array<const EventChannel*>& eventArray, const Array<const SpikeChannel*>& electrodeArray)
- {
+{
 	 //Created each time a new recording is started. Creates the specific file structures and attributes
 	 //for that specific recording
 	 String basePath;
@@ -111,6 +141,8 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 
 	 ScopedPointer<TimeSeries> tsStruct;
 	 ScopedPointer<HDF5RecordingData> dSet;
+	 ScopedPointer<HDF5RecordingData> eSet;
+	 ScopedPointer<HDF5RecordingData> starting_time;
 
 	 int nCont;
 	 nCont = continuousArray.size();
@@ -146,6 +178,8 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		 if (dSet == nullptr) return false;
 		 tsStruct->timestampDataSet = dSet;
 
+		//TODO: Where does this go in 2.0 format? P.K.
+		 /*
 		 basePath = basePath + "/oe_extra_info";
 		 if (createGroup(basePath)) return false;
 		 int nChans = continuousArray.getReference(i).size();
@@ -156,6 +190,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 			 createExtraInfo(channelPath, chan->getName(), chan->getDescription(), chan->getIdentifier(), chan->getLocalIndex(), chan->getChannelType());
 			 createChannelMetadataSets(channelPath + "/channel_metadata", chan);
 		 }
+		 */
 		 continuousDataSets.add(tsStruct.release());
 	 }		 
 
@@ -169,7 +204,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		 ancestry.clearQuick();
 		 ancestry.add("Timeseries");
 		 ancestry.add("SpikeEventSeries");
-		 if (!createTimeSeriesBase(basePath, sourceName, "Snapshorts of spike events from data", info->getName(), ancestry)) return false;
+		 if (!createTimeSeriesBase(basePath, sourceName, "Snapshots of spike events from data", info->getName(), ancestry)) return false;
 
 		 tsStruct = new TimeSeries();
 		 tsStruct->basePath = basePath;

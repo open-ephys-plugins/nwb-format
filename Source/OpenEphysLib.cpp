@@ -38,7 +38,7 @@ using namespace Plugin;
 extern "C" EXPORT void getLibInfo(Plugin::LibraryInfo* info)
 {
 	info->apiVersion = PLUGIN_API_VER;
-	info->name = "NWB format";
+	info->name = "NWB2 format";
 	info->libVersion = 1;
 	info->numPlugins = NUM_PLUGINS;
 }
@@ -49,7 +49,7 @@ extern "C" EXPORT int getPluginInfo(int index, Plugin::PluginInfo* info)
 	{
 	case 0:
 		info->type = Plugin::PLUGIN_TYPE_RECORD_ENGINE;
-		info->recordEngine.name = "NWB";
+		info->recordEngine.name = "NWB2";
 		info->recordEngine.creator = &(Plugin::createRecordEngine<NWBRecording::NWBRecordEngine>);
 		break;
 	default:

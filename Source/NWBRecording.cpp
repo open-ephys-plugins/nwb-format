@@ -38,7 +38,7 @@
  
  String NWBRecordEngine::getEngineID() const
  {
-	 return "NWB"; //a text identifier
+	 return "NWB2"; //a text identifier
  }
  
  void NWBRecordEngine::openFiles(File rootFolder, int experimentNumber, int recordingNumber)
@@ -187,7 +187,7 @@ void NWBRecordEngine::writeSpike(int electrodeIndex, const Spike* spike)
 RecordEngineManager* NWBRecordEngine::getEngineManager()
 {
 	//static factory that instantiates the engine manager, which allows to configure recording options among other things. See OriginalRecording to see how to create options for a record engine
-	RecordEngineManager* man = new RecordEngineManager("NWB", "NWB", &(engineFactory<NWBRecordEngine>));
+	RecordEngineManager* man = new RecordEngineManager("NWB2", "NWB2", &(engineFactory<NWBRecordEngine>));
 	EngineParameter* param;
 	param = new EngineParameter(EngineParameter::STR, 0, "Identifier Text", String());
 	man->addParameter(param);
