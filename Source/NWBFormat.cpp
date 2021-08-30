@@ -335,10 +335,11 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		 dSet = createTimestampDataSet(basePath, EVENT_CHUNK_SIZE);
 		 if (dSet == nullptr) return false;
 		 tsStruct->timestampDataSet = dSet;
-
+		/*
 		 dSet = createDataSet(BaseDataType::U8, 0, EVENT_CHUNK_SIZE, basePath + "/control");
 		 if (dSet == nullptr) return false;
 		 tsStruct->controlDataSet = dSet;
+		 */
 
 		 if (info->getType() == EventChannel::TTL)
 		 {
@@ -379,9 +380,12 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 	 if (dSet == nullptr) return false;
 	 tsStruct->timestampDataSet = dSet;
 
+	/*
 	 dSet = createDataSet(BaseDataType::U8, 0, 1, basePath + "/control");
 	 if (dSet == nullptr) return false;
 	 tsStruct->controlDataSet = dSet;
+	 */
+
 	 syncMsgDataSet = tsStruct;
 
 	 return true;
@@ -518,7 +522,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 	 if (event->getEventType() == EventChannel::TTL)
 	 {
 		uint8 controlValue = static_cast<const TTLEvent*>(event)->getBit() + 1;
-	 	CHECK_ERROR(eventDataSets[eventID]->controlDataSet->writeDataBlock(1, BaseDataType::U8, &controlValue));
+	 	//CHECK_ERROR(eventDataSets[eventID]->controlDataSet->writeDataBlock(1, BaseDataType::U8, &controlValue));
 		CHECK_ERROR(eventDataSets[eventID]->ttlWordDataSet->writeDataBlock(1, BaseDataType::U8, static_cast<const TTLEvent*>(event)->getRawDataPointer()));
 	 }
 	 
@@ -530,7 +534,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 	 CHECK_ERROR(syncMsgDataSet->baseDataSet->writeDataBlock(1, BaseDataType::STR(text.length()), text.toUTF8()));
 	 double timeSec = timestamp / sourceSampleRate;
 	 CHECK_ERROR(syncMsgDataSet->timestampDataSet->writeDataBlock(1, BaseDataType::F64, &timeSec));
-	 CHECK_ERROR(syncMsgDataSet->controlDataSet->writeDataBlock(1, BaseDataType::U8, &sourceID));
+	 //CHECK_ERROR(syncMsgDataSet->controlDataSet->writeDataBlock(1, BaseDataType::U8, &sourceID));
 	 syncMsgDataSet->numSamples += 1;
  }
 

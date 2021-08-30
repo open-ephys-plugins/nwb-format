@@ -39,7 +39,7 @@ namespace NWBRecording
 		ScopedPointer<HDF5RecordingData> baseDataSet;
 		ScopedPointer<HDF5RecordingData> timestampDataSet;
 		ScopedPointer<HDF5RecordingData> electrodeDataSet;
-		ScopedPointer<HDF5RecordingData> controlDataSet; //for all but spikes
+		//ScopedPointer<HDF5RecordingData> controlDataSet; //for all but spikes ... Removed in NWB2?
 		ScopedPointer<HDF5RecordingData> ttlWordDataSet; //just for ttl events
 		OwnedArray<HDF5RecordingData> metaDataSet;
 		String basePath;
