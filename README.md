@@ -1,5 +1,5 @@
-# NWBFormat
-A format to record to files based on the Neurodata Without Borders 1.0 specification
+# NWB2Format (in progress)
+A format to record to files based on the Neurodata Without Borders 2.0 specification
 
 ## Installation
 ### Installing the OpenEphysHDF5Lib Common Library
