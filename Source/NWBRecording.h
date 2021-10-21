@@ -33,6 +33,7 @@
 		public:
 			NWBRecordEngine();
 			~NWBRecordEngine();
+			
 			//Those are only the basic set of calls. Look at RecordEngine.cpp and RecordEngine.h for description on all possible hooks and the order they're called.
 			String getEngineID() const override;
 			void openFiles(File rootFolder, int experimentNumber, int recordingNumber) override;
@@ -40,7 +41,7 @@
 			void writeData(int writeChannel, int realChannel, const float* buffer, int size) override;
 			void writeSynchronizedData(int writeChannel, int realChannel, const float* dataBuffer, const double* ftsBuffer, int size) override;
 			void writeEvent(int eventIndex, const MidiMessage& event) override;
-			void addSpikeElectrode(int index,const  SpikeChannel* elec) override;
+			//void addSpikeElectrode(int index,const  SpikeChannel* elec) override;
 			void writeSpike(int electrodeIndex, const Spike* spike) override;
 			void writeTimestampSyncText(uint64 streamId, int64 timestamp, float sourceSampleRate, String text) override;
 			void resetChannels() override;

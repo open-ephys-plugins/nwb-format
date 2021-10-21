@@ -52,8 +52,8 @@
 
 	 int recProcs = getNumRecordedProcessors();
 
-	 datasetIndexes.insertMultiple(0, 0, getNumRecordedChannels());
-	 writeChannelIndexes.insertMultiple(0, 0, getNumRecordedChannels());
+	 datasetIndexes.insertMultiple(0, 0, getNumRecordedContinuousChannels());
+	 writeChannelIndexes.insertMultiple(0, 0, getNumRecordedContinuousChannels());
 
 	 //Generate the continuous datasets info array, seeking for different combinations of recorded processor and source processor
 	 int lastId = 0;
@@ -94,16 +94,16 @@
 		 }
 		 lastId = continuousChannels.size();
 	 }
-	 int nEvents = getNumRecordedEvents();
+	 int nEvents = getNumRecordedEventChannels();
 	 for (int i = 0; i < nEvents; i++)
 		 eventChannels.add(getEventChannel(i));
 
-	 int nSpikes = getNumRecordedSpikes();
+	 int nSpikes = getNumRecordedSpikeChannels();
 	 for (int i = 0; i < nSpikes; i++)
 		 spikeChannels.add(getSpikeChannel(i));
 
 	 //open the file
-	 recordFile->open(getNumRecordedChannels() + continuousChannels.size() + eventChannels.size() + spikeChannels.size()); //total channels + timestamp arrays, to create a big enough buffer
+	 recordFile->open(getNumRecordedContinuousChannels() + continuousChannels.size() + eventChannels.size() + spikeChannels.size()); //total channels + timestamp arrays, to create a big enough buffer
 
 	 //create the recording
 	 recordFile->startNewRecording(recordingNumber, continuousChannels, eventChannels, spikeChannels);
@@ -173,9 +173,11 @@ void NWBRecordEngine::writeTimestampSyncText(uint64 streamId, int64 timestamp, f
 	recordFile->writeTimestampSyncText(streamId, timestamp, sourceSampleRate, text);
 }
 
+/*
 void NWBRecordEngine::addSpikeElectrode(int index,const  SpikeChannel* elec) 
 {
 }
+*/
 
 void NWBRecordEngine::writeSpike(int electrodeIndex, const Spike* spike) 
 {

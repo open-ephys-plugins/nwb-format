@@ -175,7 +175,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		 */
 		String desc = "stream" + String(info->getNodeId() + "_" + String(info->getSourceNodeId() + "." + String(info->getStreamId())));
 		basePath = rootPath + desc;
-		if (!createTimeSeriesBase(basePath, "Stores acquired colate data from extracellular recordings", "", ancestry)) return false;
+		if (!createTimeSeriesBase(basePath, "Stores acquired colate data from extracellular recordings", "")) return false;
 		 
 		 tsStruct = new TimeSeries();
 		 tsStruct->basePath = basePath;
