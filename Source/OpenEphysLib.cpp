@@ -22,7 +22,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <PluginInfo.h>
-#include "NWBRecording.h"
+#include "RecordEngine/NWBRecording.h"
+#include "FileSource/NWBFileSource.h"
 #include <string>
 #ifdef WIN32
 #include <Windows.h>
@@ -33,7 +34,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 using namespace Plugin;
-#define NUM_PLUGINS 1
+#define NUM_PLUGINS 2
 
 extern "C" EXPORT void getLibInfo(Plugin::LibraryInfo* info)
 {
@@ -51,6 +52,12 @@ extern "C" EXPORT int getPluginInfo(int index, Plugin::PluginInfo* info)
 		info->type = Plugin::PLUGIN_TYPE_RECORD_ENGINE;
 		info->recordEngine.name = "NWB2";
 		info->recordEngine.creator = &(Plugin::createRecordEngine<NWBRecording::NWBRecordEngine>);
+		break;
+	case 1:
+		info->type = Plugin::PLUGIN_TYPE_FILE_SOURCE;
+		info->fileSource.name = "NWB file";
+		info->fileSource.creator = &(Plugin::createFileSource<NWBFileSource>);
+		info->fileSource.extensions = "nwb";
 		break;
 	default:
 		return -1;
