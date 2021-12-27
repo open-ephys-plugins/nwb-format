@@ -59,35 +59,31 @@
 	 this->xmlText = &xmlText;
  }
 
-//All int return values are 0 if succesful, other number otherwise
 int NWBFile::createFileStructure()
 {
-	//This is called when the file is first created (not if it's opened but it already exists)
-	//Creates all the common structures, like file version and such
+
 	if (createGroup("/acquisition")) return -1;
+
 	if (createGroup("/analysis")) return -1;
-	if (createGroup("/epochs")) return -1;
+
+	String time = Time::getCurrentTime().formatted("%Y-%m-%dT%H:%M:%S") + Time::getCurrentTime().getUTCOffsetString(true);
+
+	createTextDataSet("", "file_create_date", time);
+
 	if (createGroup("/general")) return -1;
-	if (createGroup("/processing")) return -1;
-	if (createGroup("/specifications")) return -1;
-
-	//if (createGroup("/acquisition/timeseries")) return -1;
-
-	//start NWB2 changes
-	//if (createGroup("general/data_collection")) return -1
-	if (createGroup("general/LabMetaData")) return -1;
 	if (createGroup("general/devices")) return -1;
-	if (createGroup("general/extracellular_ephys")) return -1;
-	if (createGroup("general/extracellular_ephys/electrodes")) return -1;
-
-	if (createGroup("general/subject")) return -1;
-
 	createTextDataSet("general", "experiment_description", " ");
 	createTextDataSet("general", "experimenter", " ");
+	if (createGroup("general/extracellular_ephys")) return -1;
 	createTextDataSet("general", "institution", " ");
+	createTextDataSet("general", "session_id", " ");
+
+	/* Not found in notebook example
 	createTextDataSet("general", "lab", " ");
 	createTextDataSet("general", "surgery", " ");
 
+	if (createGroup("general/LabMetaData")) return -1;
+	if (createGroup("general/subject")) return -1;
 	createTextDataSet("general/subject", "date_of_birth", " ");
 	createTextDataSet("general/subject", "description", " ");
 	createTextDataSet("general/subject", "genotype", " ");
@@ -95,27 +91,35 @@ int NWBFile::createFileStructure()
 	createTextDataSet("general/subject", "species", " ");
 	createTextDataSet("general/subject", "subject_id", " ");
 	createTextDataSet("general/subject", "weight", " ");
+	*/
 
+	createTextDataSet("", "identifier", identifierText);
+
+	if (createGroup("/processing")) return -1;
+
+	createTextDataSet("", "session_description", " ");
+
+	createTextDataSet("", "session_start_time", time);
+
+	if (createGroup("/specifications")) return -1;
+
+	if (createGroup("/stimulus")) return -1;
+	if (createGroup("/stimulus/presentation")) return -1;
+	if (createGroup("/stimulus/templates")) return -1;
+
+	createTextDataSet("", "timestamps_reference_time", time);
+
+	/*
 	CHECK_ERROR(setAttributeStr(String("OpenEphys GUI v") + GUIVersion, "/general/data_collection", "software"));
 	CHECK_ERROR(setAttributeStr(*xmlText, "/general/data_collection", "configuration"));
+	*/
 
-	String time = Time::getCurrentTime().formatted("%Y-%m-%dT%H:%M:%S") + Time::getCurrentTime().getUTCOffsetString(true);
-	createTextDataSet("", "file_create_date", time);
 	createTextDataSet("", "identifier", identifierText);
 	//createTextDataSet("", "nwb_version", "NWB-1.0.6");
 	createTextDataSet("", "session_description", " ");
 	createTextDataSet("", "session_start_time", time);
 
 	createTextDataSet("", "timestamps_reference_time", time);
-	
-	/* Specifications */
-	//TODO
-
-	/* Stimulus */
-	if (createGroup("/stimulus")) return -1;
-
-	if (createGroup("/stimulus/presentation")) return -1;
-	if (createGroup("/stimulus/templates")) return -1;
 
 	return 0;
 
@@ -126,272 +130,291 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 {
 
 	String rootPath = "/acquisition/";
-	if (createGroupIfDoesNotExist(rootPath + "/spikes"))
-		return false;
-	/*
-	if (createGroupIfDoesNotExist(rootPath + "/events"))
-		return false;
-	*/
 	
-	 //Created each time a new recording is started. Creates the specific file structures and attributes
-	 //for that specific recording
-	 String basePath;
-	 StringArray ancestry;
-	 /*
-	 String rootPath = "/acquisition/timeseries/recording" + String(recordingNumber + 1);
-	 if (createGroup(rootPath)) return false;
-	 if (createGroupIfDoesNotExist(rootPath + "/continuous")) return false;
-	 if (createGroupIfDoesNotExist(rootPath + "/spikes")) return false;
-	 if (createGroupIfDoesNotExist(rootPath + "/events")) return false;
-	 */
+	String basePath;
+	StringArray ancestry;
 
-	 //just in case
-	 continuousDataSets.clearQuick(true);
-	 spikeDataSets.clearQuick(true);
-	 eventDataSets.clearQuick(true);
+	//just in case
+	continuousDataSets.clearQuick(true);
+	spikeDataSets.clearQuick(true);
+	eventDataSets.clearQuick(true);
 
-	 ScopedPointer<TimeSeries> tsStruct;
-	 ScopedPointer<HDF5RecordingData> dSet;
-	 ScopedPointer<HDF5RecordingData> eSet;
-	 ScopedPointer<HDF5RecordingData> starting_time;
+	ScopedPointer<TimeSeries> tsStruct;
+	ScopedPointer<HDF5RecordingData> dSet;
+	ScopedPointer<HDF5RecordingData> eSet;
+	ScopedPointer<HDF5RecordingData> starting_time;
 
-	 int nCont;
-	 nCont = continuousArray.size();
-	 for (int i = 0; i < nCont; i++)
-	 {
-		 //All channels in a group will share the same source information (any caller to this method MUST assure this happen
-		 //so we just pick the first channel.
-		 const ContinuousChannel* info = continuousArray.getReference(i)[0];
-		 /*
-		 basePath = rootPath + "/continuous/processor" + String(info->getNodeId()) + "_" + String(info->getStreamId());
-		 //if (info->getSourceSubprocessorCount() > 1) basePath += "." + String(info->getSubProcessorIdx());
-		 String name = info->getNodeName() + " (" + String(info->getNodeId()) + ") From " + info->getSourceNodeName() + " (" + String(info->getSourceNodeId());
-		 name += "." + String(info->getStreamId());
-		 ancestry.clearQuick();
-		 name += ")";
-		 ancestry.add("Timeseries");
-		 ancestry.add("ElectricalSeries");
-		 if (!createTimeSeriesBase(basePath, name, "Stores acquired voltage data from extracellular recordings", "", ancestry)) return false;
-		 */
-		String desc = "stream" + String(info->getNodeId() + "_" + String(info->getSourceNodeId() + "." + String(info->getStreamId())));
+	int nRecordedStreams;
+	nRecordedStreams = continuousArray.size();
+	for (int i = 0; i < nRecordedStreams; i++)
+	{
+
+		//All channels in a group will share the same source information (any caller to this method MUST assure this happen
+		//so we just pick the first channel.
+		const ContinuousChannel* info = continuousArray.getReference(i)[0];
+		/*
+		basePath = rootPath + "/continuous/processor" + String(info->getNodeId()) + "_" + String(info->getStreamId());
+		//if (info->getSourceSubprocessorCount() > 1) basePath += "." + String(info->getSubProcessorIdx());
+		String name = info->getNodeName() + " (" + String(info->getNodeId()) + ") From " + info->getSourceNodeName() + " (" + String(info->getSourceNodeId());
+		name += "." + String(info->getStreamId());
+		ancestry.clearQuick();
+		name += ")";
+		ancestry.add("Timeseries");
+		ancestry.add("ElectricalSeries");
+		if (!createTimeSeriesBase(basePath, name, "Stores acquired voltage data from extracellular recordings", "", ancestry)) return false;
+		*/
+
+		std::cout << "Getting desc: " << i << std::endl;
+		String desc = info->getSourceNodeName() + "-" 
+					+ String(info->getSourceNodeId()) 
+					+  "_" + String(info->getStreamId())
+					+  "." + info->getStreamName();
+
+		std::cout << "Generated desc: " << desc << std::endl;
+	
 		basePath = rootPath + desc;
 		if (!createTimeSeriesBase(basePath, "Stores acquired colate data from extracellular recordings", "")) return false;
-		 
-		 tsStruct = new TimeSeries();
-		 tsStruct->basePath = basePath;
-		 dSet = createDataSet(BaseDataType::I16, 0, continuousArray.getReference(i).size(), CHUNK_XSIZE, basePath + "/data");
-		 if (dSet == nullptr)
-		 {
-			 std::cerr << "Error creating dataset for " << desc << std::endl;
-			 return false;
-		 }
-		 else
-		 {
-			 createDataAttributes(basePath, info->getBitVolts(), info->getBitVolts() / 65536, info->getUnits());
-		 }
-		 tsStruct->baseDataSet = dSet;
 
-		 dSet = createTimestampDataSet(basePath, CHUNK_XSIZE);
-		 if (dSet == nullptr) return false;
-		 tsStruct->timestampDataSet = dSet;
+		tsStruct = new TimeSeries();
+		tsStruct->basePath = basePath;
+		dSet = createDataSet(BaseDataType::I16, 0, continuousArray.getReference(i).size(), CHUNK_XSIZE, basePath + "/data");
+		if (dSet == nullptr)
+		{
+			std::cerr << "Error creating dataset for " << desc << std::endl;
+			return false;
+		}
+		else
+		{
+			createDataAttributes(basePath, info->getBitVolts(), info->getBitVolts() / 65536, info->getUnits());
+		}
+		tsStruct->baseDataSet = dSet;
 
-		 dSet = createElectrodeDataSet(basePath, desc, CHUNK_XSIZE);
-		 if (dSet == nullptr) return false;
-		 tsStruct->electrodeDataSet = dSet;
+		dSet = createTimestampDataSet(basePath, CHUNK_XSIZE);
+		if (dSet == nullptr) return false;
+		tsStruct->timestampDataSet = dSet;
 
-		//TODO: Where does this go in 2.0 format? P.K.
-		 /*
-		 basePath = basePath + "/oe_extra_info";
-		 if (createGroup(basePath)) return false;
-		 int nChans = continuousArray.getReference(i).size();
-		 for (int j = 0; j < nChans; j++)
-		 {
-			 String channelPath = basePath + "/channel" + String(j + 1);
-			 const ContinuousChannel* chan = continuousArray.getReference(i)[j];
-			 createExtraInfo(channelPath, chan->getName(), chan->getDescription(), chan->getIdentifier(), chan->getLocalIndex(), chan->getChannelType());
-			 createChannelMetadataSets(channelPath + "/channel_metadata", chan);
-		 }
-		 */
-		 continuousDataSets.add(tsStruct.release());
-	 }		 
 
-	 nCont = electrodeArray.size();
-	 for (int i = 0; i < nCont; i++)
-	 {
-		 basePath = rootPath + "/spikes/electrode" + String(i + 1);
-		 const SpikeChannel* info = electrodeArray[i];
-		 String sourceName = info->getSourceNodeName() + "_" + String(info->getSourceNodeId());
-		 sourceName = sourceName + "." + String(info->getStreamId());
-		 ancestry.clearQuick();
-		 ancestry.add("Timeseries");
-		 ancestry.add("SpikeEventSeries");
-		 if (!createTimeSeriesBase(basePath, "Snapshots of spike events from data", "SpikeEventSeries")) return false;
+		dSet = createElectrodeDataSet(basePath, desc, CHUNK_XSIZE);
+		if (dSet == nullptr) return false;
+		tsStruct->electrodeDataSet = dSet;
 
-		 tsStruct = new TimeSeries();
-		 tsStruct->basePath = basePath;
-
-		 dSet = createDataSet(BaseDataType::I16, 0, info->getNumChannels(), info->getTotalSamples(), SPIKE_CHUNK_XSIZE, basePath + "/data");
-		 if (dSet == nullptr)
-		 {
-			 std::cerr << "Error creating dataset for electrode " << i << std::endl;
-			 return false;
-		 }
-		 else
-		 {
-			 createDataAttributes(basePath, info->getChannelBitVolts(0), info->getChannelBitVolts(0) / 65536, "volt");
-		 }
-		 tsStruct->baseDataSet = dSet;
-		 dSet = createTimestampDataSet(basePath, SPIKE_CHUNK_XSIZE);
-		 if (dSet == nullptr) return false;
-		 tsStruct->timestampDataSet = dSet;
+		//TODO: Where does this go in NWB2? 
+			//TODO: Where does this go in NWB2? 
+		//TODO: Where does this go in NWB2? 
 		/*
-		 basePath = basePath + "/oe_extra_info";
-		 createExtraInfo(basePath, info->getName(), info->getDescription(), info->getIdentifier(), info->getLocalIndex(), info->getChannelType());
-		 createChannelMetadataSets(basePath + "/channel_metadata", info);
-		 createEventMetadataSets(basePath + "/spike_metadata", tsStruct, info);
-		 */
+		basePath = basePath + "/oe_extra_info";
+		if (createGroup(basePath)) return false;
+		int nChans = continuousArray.getReference(i).size();
+		for (int j = 0; j < nChans; j++)
+		{
+			String channelPath = basePath + "/channel" + String(j + 1);
+			const ContinuousChannel* chan = continuousArray.getReference(i)[j];
+			createExtraInfo(channelPath, chan->getName(), chan->getDescription(), chan->getIdentifier(), chan->getLocalIndex(), chan->getChannelType());
+			createChannelMetadataSets(channelPath + "/channel_metadata", chan);
+		}
+		*/
+		continuousDataSets.add(tsStruct.release());
+	}
 
-		 spikeDataSets.add(tsStruct.release());
+	int nRecordedElectrodes;
+	nRecordedElectrodes = electrodeArray.size();
+	std::unordered_set<String> spikeStreams;
 
+	String currentGroup = "";
+	for (int i = 0; i < nRecordedElectrodes; i++)
+	{
+		const SpikeChannel* sourceInfo = electrodeArray[i];
 
-	 }
+		String sourceName = sourceInfo->getSourceNodeName() + "-" + String(sourceInfo->getSourceNodeId());
+		sourceName += "." + sourceInfo->getStreamName();
+		basePath = rootPath + sourceName + ".spikes";
+
+		//Check if we have found a new stream
+		if (basePath != currentGroup)
+		{
+			if (createGroup(basePath)) return false;
+			currentGroup = basePath;
+		}
+
+		basePath += "/" + sourceInfo->getName();
+
+		if (!createTimeSeriesBase(basePath, "Stores acquired spike data from extracellular recordings", "")) return false;
+
+		ancestry.clearQuick();
+		ancestry.add("Timeseries");
+		ancestry.add("SpikeEventSeries");
+
+		tsStruct = new TimeSeries();
+		tsStruct->basePath = basePath;
+
+		dSet = createDataSet(BaseDataType::I16, 0, sourceInfo->getNumChannels(), sourceInfo->getTotalSamples(), SPIKE_CHUNK_XSIZE, basePath + "/data");
+		if (dSet == nullptr)
+		{
+			std::cerr << "Error creating dataset for electrode " << i << std::endl;
+			return false;
+		}
+		else
+		{
+			createDataAttributes(basePath, sourceInfo->getChannelBitVolts(0), sourceInfo->getChannelBitVolts(0) / 65536, "volt");
+		}
+		tsStruct->baseDataSet = dSet;
+		dSet = createTimestampDataSet(basePath, SPIKE_CHUNK_XSIZE);
+		if (dSet == nullptr) return false;
+		tsStruct->timestampDataSet = dSet;
+
+		/*
+		basePath = basePath + "/oe_extra_info";
+		createExtraInfo(basePath, info->getName(), info->getDescription(), info->getIdentifier(), info->getLocalIndex(), info->getChannelType());
+		createChannelMetadataSets(basePath + "/channel_metadata", info);
+		createEventMetadataSets(basePath + "/spike_metadata", tsStruct, info);
+		*/
+
+		spikeDataSets.add(tsStruct.release());
+
+	}
 	
-	 nCont = eventArray.size();
-	 int nTTL = 0;
-	 int nTXT = 0;
-	 int nBIN = 0;
-	 for (int i = 0; i < nCont; i++)
-	 {
-		 //basePath = rootPath + "/events";
-		 const EventChannel* info = eventArray[i];
-		 String sourceName = info->getSourceNodeName() + "_" + String(info->getSourceNodeId());
-		 sourceName = sourceName + "." + String(info->getStreamId());
+	int nEvents = eventArray.size();
+	int nTTL = 0;
+	int nTXT = 0;
+	int nBIN = 0;
+	for (int i = 0; i < nEvents; i++)
+	{
 
-		 basePath = rootPath + sourceName + "_events";
+		basePath = rootPath;
+		const EventChannel* info = eventArray[i];
+		String sourceName = info->getSourceNodeName() + "-" + String(info->getSourceNodeId());
+		sourceName += "." + info->getStreamName();
+		//sourceName = sourceName + "." + String(info->getStreamId());
 
-		 /*
-		 ancestry.clearQuick();
-		 ancestry.add("Timeseries");
-		 */
+		//basePath = rootPath + sourceName + "_events";
 
-		 String series;
+		/*
+		ancestry.clearQuick();
+		ancestry.add("Timeseries");
+		*/
+		String series;
 
-		 String helpText;
+		String helpText;
 
-		 switch (info->getType())
-		 {	
-		 case EventChannel::TTL:
-			 nTTL += 1;
-			 //basePath = basePath + "/ttl" + String(nTTL);
-			 /*
-			 ancestry.add("IntervalSeries");
-			 ancestry.add("TTLSeries");
-			 */
+		switch (info->getType())
+		{	
+		case EventChannel::TTL:
+			nTTL += 1;
+			//basePath = basePath + "/ttl" + String(nTTL);
+			/*
+			ancestry.add("IntervalSeries");
+			ancestry.add("TTLSeries");
+			*/
+			basePath += sourceName + ".TTL";
 			series = "IntervalSeries";
-			 helpText = "Stores the start and stop times for TTL events";
-			 break;
-		 case EventChannel::TEXT:
-			 nTXT += 1;
-			 //basePath = basePath + "/text" + String(nTXT);
-			 //ancestry.add("AnnotationSeries");
-			 series = "AnnotationSeries";
-			 helpText = "Time-stamped annotations about an experiment";
-			 break;
-		 default:
-			 nBIN += 1;
-			 //basePath = basePath + "/binary" + String(nBIN);
-			 //ancestry.add("BinarySeries");
-			 series = "IntervalSeries";
-			 helpText = "Stores arbitrary binary data";
-			 break;
+			helpText = "Stores the start and stop times for TTL events";
+			break;
+		case EventChannel::TEXT:
+			nTXT += 1;
+			//basePath = basePath + "/text" + String(nTXT);
+			//ancestry.add("AnnotationSeries");
+			basePath += "messages";
+			series = "AnnotationSeries";
+			helpText = "Time-stamped annotations about an experiment";
+			break;
+		default:
+			nBIN += 1;
+			//basePath = basePath + "/binary" + String(nBIN);
+			//ancestry.add("BinarySeries");
+			basePath += sourceName + ".custom";
+			series = "IntervalSeries";
+			helpText = "Stores arbitrary binary data";
+			break;
 		 }
 
-		 //if (!createTimeSeriesBase(basePath, sourceName, helpText, info->getDescription(), ancestry)) return false;
-		 if (!createTimeSeriesBase(basePath, helpText, series)) return false;
+		//if (!createTimeSeriesBase(basePath, sourceName, helpText, info->getDescription(), ancestry)) return false;
+		if (!createTimeSeriesBase(basePath, helpText, series)) return false;
 
-		 tsStruct = new TimeSeries();
-		 tsStruct->basePath = basePath;
+		tsStruct = new TimeSeries();
+		tsStruct->basePath = basePath;
 
-		 if (info->getType() >= EventChannel::BinaryDataType::BINARY_BASE_VALUE) //only binary events have length greater than 1
-		 {
-			 dSet = createDataSet(getEventH5Type(info->getType(), info->getLength()), 0, info->getLength(), EVENT_CHUNK_SIZE, basePath + "/data");;
-		 }
-		 else
-		 {
-			 dSet = createDataSet(getEventH5Type(info->getType(), info->getLength()), 0, EVENT_CHUNK_SIZE, basePath + "/data");
-		 }
+		if (info->getType() >= EventChannel::BinaryDataType::BINARY_BASE_VALUE) //only binary events have length greater than 1
+		{
+			dSet = createDataSet(getEventH5Type(info->getType(), info->getLength()), 0, info->getLength(), EVENT_CHUNK_SIZE, basePath + "/data");;
+		}
+		else
+		{
+			dSet = createDataSet(getEventH5Type(info->getType(), info->getLength()), 0, EVENT_CHUNK_SIZE, basePath + "/data");
+		}
 
-		 if (dSet == nullptr)
-		 {
-			 std::cerr << "Error creating dataset for event " << info->getName() << std::endl;
-			 return false;
-		 }
-		 else
-		 {
-			 createDataAttributes(basePath, NAN, NAN, "n/a");
-		 }
+		if (dSet == nullptr)
+		{
+			std::cerr << "Error creating dataset for event " << info->getName() << std::endl;
+			return false;
+		}
+		else
+		{
+			createDataAttributes(basePath, NAN, NAN, "n/a");
+		}
 
 
-		 tsStruct->baseDataSet = dSet;
-		 dSet = createTimestampDataSet(basePath, EVENT_CHUNK_SIZE);
-		 if (dSet == nullptr) return false;
-		 tsStruct->timestampDataSet = dSet;
+		tsStruct->baseDataSet = dSet;
+		dSet = createTimestampDataSet(basePath, EVENT_CHUNK_SIZE);
+		if (dSet == nullptr) return false;
+		tsStruct->timestampDataSet = dSet;
 		/*
-		 dSet = createDataSet(BaseDataType::U8, 0, EVENT_CHUNK_SIZE, basePath + "/control");
-		 if (dSet == nullptr) return false;
-		 tsStruct->controlDataSet = dSet;
-		 */
+		dSet = createDataSet(BaseDataType::U8, 0, EVENT_CHUNK_SIZE, basePath + "/control");
+		if (dSet == nullptr) return false;
+		tsStruct->controlDataSet = dSet;
+		*/
 
-		 if (info->getType() == EventChannel::TTL)
-		 {
-			 dSet = createDataSet(BaseDataType::U8, 0, info->getDataSize(), EVENT_CHUNK_SIZE, basePath + "/full_word");
-			 if (dSet == nullptr) return false;
-			 tsStruct->ttlWordDataSet = dSet;
-		 }
+		if (info->getType() == EventChannel::TTL)
+		{
+			dSet = createDataSet(BaseDataType::U8, 0, info->getDataSize(), EVENT_CHUNK_SIZE, basePath + "/full_word");
+			if (dSet == nullptr) return false;
+			tsStruct->ttlWordDataSet = dSet;
+		}
 
 		/*
-		 basePath = basePath + "/oe_extra_info";
-		 createExtraInfo(basePath, info->getName(), info->getDescription(), info->getIdentifier(), info->getLocalIndex(), info->getType());
-		 createChannelMetadataSets(basePath + "/channel_metadata", info);
-		 createEventMetadataSets(basePath + "/event_metadata", tsStruct, info);
-		 */
-		 eventDataSets.add(tsStruct.release());
+		basePath = basePath + "/oe_extra_info";
+		createExtraInfo(basePath, info->getName(), info->getDescription(), info->getIdentifier(), info->getLocalIndex(), info->getType());
+		createChannelMetadataSets(basePath + "/channel_metadata", info);
+		createEventMetadataSets(basePath + "/event_metadata", tsStruct, info);
+		*/
+		eventDataSets.add(tsStruct.release());
 
-	 }
-	 //basePath = rootPath + "/events/sync_messages";
-	 basePath = rootPath + "sync_messages";
-	 ancestry.clearQuick();
-	 ancestry.add("Timeseries");
-	 ancestry.add("AnnotationSeries");
-	 String desc = "Stores recording start timestamps for each processor in text format";
-	 //if (!createTimeSeriesBase(basePath, "Autogenerated messages", desc, desc, ancestry)) return false;
-	 if (!createTimeSeriesBase(basePath, "Autogenerated messages", "AnnotationSeries")) return false;
-	 tsStruct = new TimeSeries();
-	 tsStruct->basePath = basePath;
-	 dSet = createDataSet(BaseDataType::STR(100), 0, 1, basePath + "/data");
-	 if (dSet == nullptr)
-	 {
-		 std::cerr << "Error creating dataset for sync messages" << std::endl;
-		 return false;
-	 }
-	 else
-	 {
-		 createDataAttributes(basePath, NAN, NAN, "n/a");
-	 }
-	 tsStruct->baseDataSet = dSet;
-	 dSet = createTimestampDataSet(basePath, 1);
-	 if (dSet == nullptr) return false;
-	 tsStruct->timestampDataSet = dSet;
+	}
+	
+	//basePath = rootPath + "/events/sync_messages";
+	basePath = rootPath + "sync_messages";
+	ancestry.clearQuick();
+	ancestry.add("Timeseries");
+	ancestry.add("AnnotationSeries");
+	String desc = "Stores recording start timestamps for each processor in text format";
+	//if (!createTimeSeriesBase(basePath, "Autogenerated messages", desc, desc, ancestry)) return false;
+	if (!createTimeSeriesBase(basePath, "Autogenerated messages", "AnnotationSeries")) return false;
+	tsStruct = new TimeSeries();
+	tsStruct->basePath = basePath;
+	dSet = createDataSet(BaseDataType::STR(100), 0, 1, basePath + "/data");
+	if (dSet == nullptr)
+	{
+		std::cerr << "Error creating dataset for sync messages" << std::endl;
+		return false;
+	}
+	else
+	{
+		createDataAttributes(basePath, NAN, NAN, "n/a");
+	}
+	tsStruct->baseDataSet = dSet;
+	dSet = createTimestampDataSet(basePath, 1);
+	if (dSet == nullptr) return false;
+	tsStruct->timestampDataSet = dSet;
 
 	/*
-	 dSet = createDataSet(BaseDataType::U8, 0, 1, basePath + "/control");
-	 if (dSet == nullptr) return false;
-	 tsStruct->controlDataSet = dSet;
-	 */
+	dSet = createDataSet(BaseDataType::U8, 0, 1, basePath + "/control");
+	if (dSet == nullptr) return false;
+	tsStruct->controlDataSet = dSet;
+	*/
 
-	 syncMsgDataSet = tsStruct;
+	syncMsgDataSet = tsStruct;
 
-	 return true;
+	return true;
+
  }
  
  void NWBFile::stopRecording()
@@ -416,7 +439,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		 CHECK_ERROR(setAttribute(BaseDataType::U64, &(tsStruct->numSamples), tsStruct->basePath, "num_samples"));
 	 }
 	 
-	 CHECK_ERROR(setAttribute(BaseDataType::U64, &(syncMsgDataSet->numSamples), syncMsgDataSet->basePath, "num_samples"));
+	 //CHECK_ERROR(setAttribute(BaseDataType::U64, &(syncMsgDataSet->numSamples), syncMsgDataSet->basePath, "num_samples"));
 
 	 continuousDataSets.clear();
 	 spikeDataSets.clear();
@@ -616,7 +639,8 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 	  CHECK_ERROR(setAttributeStr("openephys:<metadata>/", basePath, "schema_id"));
 	  int nMetadata = info->getMetadataCount();
 	  
-	  for (int i = 0; i < nMetadata; i++)
+	  for (int i 
+	  	= 0; i < nMetadata; i++)
 	  {
 		  const MetadataDescriptor* desc = info->getMetadataDescriptor(i);
 		  String fieldName = "Field_" + String(i+1);

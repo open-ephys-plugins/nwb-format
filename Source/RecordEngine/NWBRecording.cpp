@@ -170,7 +170,8 @@ void NWBRecordEngine::writeEvent(int eventIndex, const MidiMessage& event)
 
 void NWBRecordEngine::writeTimestampSyncText(uint64 streamId, int64 timestamp, float sourceSampleRate, String text)
 {
-	recordFile->writeTimestampSyncText(streamId, timestamp, sourceSampleRate, text);
+	//FIXME: ???
+	//recordFile->writeTimestampSyncText(streamId, timestamp, sourceSampleRate, text);
 }
 
 /*

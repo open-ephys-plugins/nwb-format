@@ -40,7 +40,7 @@ extern "C" EXPORT void getLibInfo(Plugin::LibraryInfo* info)
 {
 	info->apiVersion = PLUGIN_API_VER;
 	info->name = "NWB2 format";
-	info->libVersion = 1;
+	info->libVersion = "1";
 	info->numPlugins = NUM_PLUGINS;
 }
 
@@ -49,12 +49,12 @@ extern "C" EXPORT int getPluginInfo(int index, Plugin::PluginInfo* info)
 	switch (index)
 	{
 	case 0:
-		info->type = Plugin::PLUGIN_TYPE_RECORD_ENGINE;
+		info->type = Plugin::RECORD_ENGINE;
 		info->recordEngine.name = "NWB2";
 		info->recordEngine.creator = &(Plugin::createRecordEngine<NWBRecording::NWBRecordEngine>);
 		break;
 	case 1:
-		info->type = Plugin::PLUGIN_TYPE_FILE_SOURCE;
+		info->type = Plugin::FILE_SOURCE;
 		info->fileSource.name = "NWB file";
 		info->fileSource.creator = &(Plugin::createFileSource<NWBFileSource>);
 		info->fileSource.extensions = "nwb";

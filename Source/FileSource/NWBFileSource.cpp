@@ -69,30 +69,62 @@ bool NWBFileSource::Open(File file)
 
 void NWBFileSource::fillRecordInfo()
 {
-    Group recordings;
+    Group acquisition;
 
     try
     {
         
-        recordings = sourceFile->openGroup("/acquisition/timeseries");
+        acquisition = sourceFile->openGroup("/acquisition/");
         
-        int nRecordings = (int) recordings.getNumObjs();
+        int dataSources = (int) acquisition.getNumObjs();
 
-        for (int i = 0; i < nRecordings; i++)
+        for (int i = 0; i < dataSources; i++)
         {
+
             try
             {
 
-                Group recordN;
+                Group dataSource;
                 DataSet data;
                 Attribute attr;
                 DataSpace dSpace;
                 float sampleRate = 40000.0f; //TODO: Pull this out from interval
                 float bitVolts;
-                hsize_t dims[3];
+                hsize_t dims[3];    
 
-                H5std_string recordingName = recordings.getObjnameByIdx(hsize_t(i));
+                H5std_string dataSourceName = acquisition.getObjnameByIdx(hsize_t(i));
 
+                StringArray tokens;
+                tokens.addTokens(dataSourceName, ".", "\\");
+
+                String processor;
+                String stream;
+                String type;
+
+                if (tokens.size() == 1)
+                    continue; //tokens = ["messages"]
+                else 
+                {   
+                    //Found continuous data stream
+                    processor = tokens[0];
+                    stream = tokens[1];
+
+                    if (tokens.size() > 2) //event or spike data
+                    {
+                        /* For TTL could be .TLL or .TTL_1 etc. */
+
+                        type = tokens[2];
+
+                        std::cout << "Found event or spike data: " << tokens[2] << std::endl;
+
+                    }
+                    else //continuous stream
+                    {
+                        Group continuous = acquisition.openGroup(dataSourceName);
+                        std::cout << "Succesfully opened stream: " << dataSourceName << std::endl;
+                    }
+                }
+                /*
                 String continuousDataPath = (String(recordingName) + "/continuous/");
                 Group continuous = recordings.openGroup(continuousDataPath.toUTF8());
 
@@ -162,7 +194,7 @@ void NWBFileSource::fillRecordInfo()
                             attr.read(ArrayType(PredType::NATIVE_FLOAT, 1, &dims[1]), bitVoltArray);
                             foundBitVoltArray = true;
                         }
-                        */
+                        
                     } catch (GroupIException)
                     {
                         std::cout << "!!!GroupIException!!!" << std::endl; 
@@ -171,6 +203,8 @@ void NWBFileSource::fillRecordInfo()
                         std::cout << "!!!AttributeIException!!!" << std::endl;
                     }
                 }
+
+                */
 
             }
             catch (GroupIException)
@@ -292,8 +326,14 @@ void NWBFileSource::processChannelData(int16* inBuffer, float* outBuffer, int ch
 
 }
 
+void NWBFileSource::processEventData(EventInfo &eventInfo, int64 start, int64 stop)
+{
+    //TODO
+}
+
 bool NWBFileSource::isReady()
 {
+    /*
 	//HDF5 is by default not thread-safe, so we must warn the user.
 	if ((!skipRecordEngineCheck) && (CoreServices::getSelectedRecordEngineId() == "NWB"))
 	{
@@ -318,5 +358,8 @@ bool NWBFileSource::isReady()
 	}
 	else
 		return true;
+    */
+
+    return true;
 }
 
