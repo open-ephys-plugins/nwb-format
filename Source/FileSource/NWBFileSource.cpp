@@ -88,7 +88,7 @@ void NWBFileSource::fillRecordInfo()
                 DataSet data;
                 Attribute attr;
                 DataSpace dSpace;
-                float sampleRate = 40000.0f; //TODO: Pull this out from interval
+                float sampleRate;
                 float bitVolts;
                 hsize_t dims[3];    
 
@@ -100,6 +100,11 @@ void NWBFileSource::fillRecordInfo()
                 String processor;
                 String stream;
                 String type;
+
+                for (auto& token : tokens)
+                    std::cout << token << ", ";
+                
+                std::cout << std::endl;
 
                 if (tokens.size() == 1)
                     continue; //tokens = ["messages"]
@@ -115,13 +120,62 @@ void NWBFileSource::fillRecordInfo()
 
                         type = tokens[2];
 
-                        std::cout << "Found event or spike data: " << tokens[2] << std::endl;
-
                     }
                     else //continuous stream
                     {
                         Group continuous = acquisition.openGroup(dataSourceName);
-                        std::cout << "Succesfully opened stream: " << dataSourceName << std::endl;
+
+                        RecordInfo info;
+
+                        H5std_string processorName = continuous.getObjnameByIdx(hsize_t(0));
+
+                        data = continuous.openDataSet("data");
+
+                        dSpace = data.getSpace();
+                        dSpace.getSimpleExtentDims(dims);
+
+                        info.name = tokens[1];
+                        info.numSamples = dims[0];
+
+                        attr = data.openAttribute("conversion");
+                        attr.read(PredType::NATIVE_FLOAT, &bitVolts);
+
+                        //Compute sample rate from first few timestamps
+                        data = continuous.openDataSet("timestamps");
+
+                        dSpace = data.getSpace();
+                        dSpace.getSimpleExtentDims(dims);
+
+                        HeapBlock<double> tsArray(dims[0]);
+                        data.read(tsArray.getData(), PredType::NATIVE_DOUBLE);
+
+                        info.sampleRate = 2 / (tsArray[2] - tsArray[0]);
+
+                        try
+                        {
+                            for (int k = 0; k < dims[1]; k++)
+                            {
+                                RecordedChannelInfo c;
+                                c.name = "CH" + String(k);
+                                c.bitVolts = bitVolts;
+                                info.channels.add(c);
+                            }   
+                            infoArray.add(info);
+                            availableDataSets.add(numRecords);
+                            dataPaths.set(numRecords, dataSourceName);
+                            numRecords++;
+
+                            
+                        } catch (GroupIException)
+                        {
+                            std::cout << "!!!GroupIException!!!" << std::endl; 
+                        } catch (AttributeIException)
+                        {
+                            std::cout << "!!!AttributeIException!!!" << std::endl;
+                        }
+
+                        
+ 
                     }
                 }
                 /*
@@ -246,9 +300,7 @@ void NWBFileSource::updateActiveRecord()
     samplePos=0;
     try
     {
-        std::cout << "ActiveRecord.get: " << activeRecord.get() << std::endl;
-        String path = "/acquisition/timeseries/" + dataPaths[activeRecord.get()] + "/data";
-        std::cout << "path: " << path << std::endl;
+        String path = "/acquisition/" + dataPaths[activeRecord.get()] + "/data";
         dataSet = new DataSet(sourceFile->openDataSet(path.toUTF8()));
     }
     catch (FileIException error)
