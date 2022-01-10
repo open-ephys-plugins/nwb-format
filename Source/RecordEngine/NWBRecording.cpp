@@ -36,7 +36,7 @@
  {
  }
  
- String NWBRecordEngine::getEngineID() const
+ String NWBRecordEngine::getEngineId() const
  {
 	 return "NWB2"; //a text identifier
  }

@@ -35,7 +35,7 @@
 			~NWBRecordEngine();
 			
 			//Those are only the basic set of calls. Look at RecordEngine.cpp and RecordEngine.h for description on all possible hooks and the order they're called.
-			String getEngineID() const override;
+			String getEngineId() const override;
 			void openFiles(File rootFolder, int experimentNumber, int recordingNumber) override;
 			void closeFiles() override;
 			void writeData(int writeChannel, int realChannel, const float* buffer, int size) override;
