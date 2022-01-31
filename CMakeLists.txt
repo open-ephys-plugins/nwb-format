@@ -10,6 +10,8 @@ endif()
 get_filename_component(PROJECT_FOLDER ${CMAKE_CURRENT_SOURCE_DIR} ABSOLUTE)
 get_filename_component(PLUGIN_NAME ${PROJECT_FOLDER} NAME)
 
+set(CMAKE_OSX_ARCHITECTURES "x86_64" CACHE STRING "Build architecture for Mac OS X" FORCE)
+
 project(OE_PLUGIN_${PLUGIN_NAME})
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
@@ -59,6 +61,7 @@ endif()
 
 #Libraries and compiler options
 if(MSVC)
+	add_compile_definitions(H5_BUILT_AS_DYNAMIC_LIB=1)
 	target_link_libraries(${PLUGIN_NAME} ${GUI_BIN_DIR}/open-ephys.lib)
 	target_compile_options(${PLUGIN_NAME} PRIVATE /sdl-)
 	
@@ -68,7 +71,7 @@ if(MSVC)
 elseif(LINUX)
 	target_link_libraries(${PLUGIN_NAME} GL X11 Xext Xinerama asound dl freetype pthread rt)
 	set_property(TARGET ${PLUGIN_NAME} APPEND_STRING PROPERTY LINK_FLAGS
-		"-fvisibility=hidden -fPIC -rdynamic -Wl,-rpath,'$ORIGIN/../shared'")
+		"-fvisibility=hidden -fPIC -rdynamic -Wl,-rpath='$ORIGIN/../shared' -Wl,-rpath='$ORIGIN/../shared-api8'")
 	target_compile_options(${PLUGIN_NAME} PRIVATE -fPIC -rdynamic)
 	target_compile_options(${PLUGIN_NAME} PRIVATE -O0) #enable optimization for linux debug
 	
@@ -77,9 +80,9 @@ elseif(LINUX)
 elseif(APPLE)
 	set_target_properties(${PLUGIN_NAME} PROPERTIES BUNDLE TRUE)
 	set_property(TARGET ${PLUGIN_NAME} APPEND_STRING PROPERTY LINK_FLAGS
-	"-undefined dynamic_lookup -rpath @loader_path/../../../../shared")
+	"-undefined dynamic_lookup -rpath @loader_path/../../../../shared-api8")
 
-	install(TARGETS ${PLUGIN_NAME} DESTINATION $ENV{HOME}/Library/Application\ Support/open-ephys/PlugIns)
+	install(TARGETS ${PLUGIN_NAME} DESTINATION $ENV{HOME}/Library/Application\ Support/open-ephys/plugins-api8)
 	set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/libs/macos)
 endif()
 
@@ -92,12 +95,8 @@ foreach( src_file IN ITEMS ${SRC_FILES})
 	source_group("${group_name}" FILES "${src_file}")
 endforeach()
 
-if (APPLE) #this is needed by the unorthodox way hdf5 version 18 is installed
-	set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH};/opt/local/lib/hdf5-18)
-endif()
-
 #additional libraries needed
-find_package(HDF5 1.8 EXACT COMPONENTS C CXX)
+find_package(HDF5 1.12.1 EXACT COMPONENTS C CXX)
 
 if(NOT HDF5_FOUND) #if package finding fails, try manually
 	#unset variables in case a wrong version has been found

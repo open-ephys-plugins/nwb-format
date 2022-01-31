@@ -6,23 +6,16 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * the COPYING file, which can be found at the root of the source code       *
+ * distribution tree, or in https://www.hdfgroup.org/licenses.               *
+ * If you do not have access to either file, you may request a copy from     *
+ * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-// Class DataType inherits from H5Object and has several subclasses for
-// specific HDF5 data types.
+#ifndef H5DataType_H
+#define H5DataType_H
 
-#ifndef __H5DataType_H
-#define __H5DataType_H
-
-#ifndef H5_NO_NAMESPACE
 namespace H5 {
-#endif
 
 /*! \class DataType
     \brief Class DataType provides generic operations on HDF5 datatypes.
@@ -31,114 +24,163 @@ namespace H5 {
     object and is a base class of ArrayType, AtomType, CompType, EnumType,
     and VarLenType.
 */
+//  Inheritance: DataType -> H5Object -> H5Location -> IdComponent
 class H5_DLLCPP DataType : public H5Object {
-   public:
-	// Creates a datatype given its class and size
-	DataType( const H5T_class_t type_class, size_t size );
+  public:
+    // Creates a datatype given its class and size
+    DataType(const H5T_class_t type_class, size_t size);
 
-	// Copy constructor: makes a copy of the original object
-	DataType( const DataType& original );
+    // Copy constructor - same as the original DataType.
+    DataType(const DataType &original);
 
-	// Creates a datatype by way of dereference.
-	DataType(const H5Location& loc, const void* ref, H5R_type_t ref_type = H5R_OBJECT);
-	DataType(const Attribute& attr, const void* ref, H5R_type_t ref_type = H5R_OBJECT);
+    // Creates a copy of a predefined type
+    DataType(const PredType &pred_type);
 
-	// Closes this datatype.
-	virtual void close();
+    // Constructors to open a generic named datatype at a given location.
+    DataType(const H5Location &loc, const char *name);
+    DataType(const H5Location &loc, const H5std_string &name);
 
-	// Copies an existing datatype to this datatype object.
-	void copy(const DataType& like_type);
+    // Creates a datatype by way of dereference.
+    DataType(const H5Location &loc, const void *ref, H5R_type_t ref_type = H5R_OBJECT,
+             const PropList &plist = PropList::DEFAULT);
+    //        DataType(const Attribute& attr, const void* ref, H5R_type_t ref_type = H5R_OBJECT, const
+    //        PropList& plist = PropList::DEFAULT);
 
-	// Copies the datatype of dset to this datatype object.
-	void copy(const DataSet& dset);
+    // Closes this datatype.
+    virtual void close();
 
-	// Returns the datatype class identifier.
-	H5T_class_t getClass() const;
+    // Copies an existing datatype to this datatype object.
+    void copy(const DataType &like_type);
 
-	// Commits a transient datatype to a file; this datatype becomes
-	// a named datatype which can be accessed from the location.
-	void commit(const H5Location& loc, const char* name);
-	void commit(const H5Location& loc, const H5std_string& name);
-	// These two overloaded functions are kept for backward compatibility
-	// only; they missed the const.
-	void commit(H5Location& loc, const char* name);
-	void commit(H5Location& loc, const H5std_string& name);
+    // Copies the datatype of dset to this datatype object.
+    void copy(const DataSet &dset);
 
-	// Determines whether this datatype is a named datatype or
-	// a transient datatype.
-	bool committed() const;
+    // Returns a DataType instance by decoding the binary object
+    // description of this datatype.
+    virtual DataType *decode() const;
 
-        // Finds a conversion function that can handle the conversion
-        // this datatype to the given datatype, dest.
-	H5T_conv_t find( const DataType& dest, H5T_cdata_t **pcdata ) const;
+    // Creates a binary object description of this datatype.
+    void encode();
 
-	// Converts data from between specified datatypes.
-	void convert( const DataType& dest, size_t nelmts, void *buf, void *background, const PropList& plist=PropList::DEFAULT) const;
+    // Returns the datatype class identifier.
+    H5T_class_t getClass() const;
 
-	// Assignment operator
-	DataType& operator=( const DataType& rhs );
+    // Commits a transient datatype to a file; this datatype becomes
+    // a named datatype which can be accessed from the location.
+    void commit(const H5Location &loc, const char *name);
+    void commit(const H5Location &loc, const H5std_string &name);
 
-	// Determines whether two datatypes are the same.
-	bool operator==(const DataType& compared_type ) const;
+    // These two overloaded functions are kept for backward compatibility
+    // only; they missed the const - removed from 1.8.18 and 1.10.1
+    // void commit(H5Location& loc, const char* name);
+    // void commit(H5Location& loc, const H5std_string& name);
 
-	// Locks a datatype.
-	void lock() const;
+    // Determines whether this datatype is a named datatype or
+    // a transient datatype.
+    bool committed() const;
 
-	// Returns the size of a datatype.
-	size_t getSize() const;
+    // Finds a conversion function that can handle the conversion
+    // this datatype to the given datatype, dest.
+    H5T_conv_t find(const DataType &dest, H5T_cdata_t **pcdata) const;
 
-	// Returns the base datatype from which a datatype is derived.
-	// Note: not quite right for specific types yet???
-	DataType getSuper() const;
+    // Converts data from between specified datatypes.
+    void convert(const DataType &dest, size_t nelmts, void *buf, void *background,
+                 const PropList &plist = PropList::DEFAULT) const;
 
-	// Registers a conversion function.
-	void registerFunc(H5T_pers_t pers, const char* name, const DataType& dest, H5T_conv_t func ) const;
-	void registerFunc(H5T_pers_t pers, const H5std_string& name, const DataType& dest, H5T_conv_t func ) const;
+    // Assignment operator
+    DataType &operator=(const DataType &rhs);
 
-	// Removes a conversion function from all conversion paths.
-	void unregister( H5T_pers_t pers, const char* name, const DataType& dest, H5T_conv_t func ) const;
-	void unregister( H5T_pers_t pers, const H5std_string& name, const DataType& dest, H5T_conv_t func ) const;
+    // Determines whether two datatypes are the same.
+    bool operator==(const DataType &compared_type) const;
 
-	// Tags an opaque datatype.
-	void setTag( const char* tag ) const;
-	void setTag( const H5std_string& tag ) const;
+    // Determines whether two datatypes are not the same.
+    bool operator!=(const DataType &compared_type) const;
 
-	// Gets the tag associated with an opaque datatype.
-	H5std_string getTag() const;
+    // Locks a datatype.
+    void lock() const;
 
-	// Checks whether this datatype contains (or is) a certain type class.
-	bool detectClass(H5T_class_t cls) const;
+    // Returns the size of a datatype.
+    size_t getSize() const;
 
-	// Checks whether this datatype is a variable-length string.
-	bool isVariableStr() const;
+    // Returns the base datatype from which a datatype is derived.
+    // Note: not quite right for specific types yet???
+    DataType getSuper() const;
 
-	///\brief Returns this class name.
-	virtual H5std_string fromClass () const { return("DataType"); }
+    // Registers a conversion function.
+    void registerFunc(H5T_pers_t pers, const char *name, const DataType &dest, H5T_conv_t func) const;
+    void registerFunc(H5T_pers_t pers, const H5std_string &name, const DataType &dest, H5T_conv_t func) const;
 
-	// Creates a copy of an existing DataType using its id
-	DataType( const hid_t type_id );
+    // Removes a conversion function from all conversion paths.
+    void unregister(H5T_pers_t pers, const char *name, const DataType &dest, H5T_conv_t func) const;
+    void unregister(H5T_pers_t pers, const H5std_string &name, const DataType &dest, H5T_conv_t func) const;
 
-	// Default constructor
-	DataType();
+    // Tags an opaque datatype.
+    void setTag(const char *tag) const;
+    void setTag(const H5std_string &tag) const;
 
-	// Gets the datatype id.
-	virtual hid_t getId() const;
+    // Gets the tag associated with an opaque datatype.
+    H5std_string getTag() const;
 
-	// Destructor: properly terminates access to this datatype.
-	virtual ~DataType();
+    // Checks whether this datatype contains (or is) a certain type class.
+    bool        detectClass(H5T_class_t cls) const;
+    static bool detectClass(const PredType &pred_type, H5T_class_t cls);
 
-   protected:
+    // Checks whether this datatype is a variable-length string.
+    bool isVariableStr() const;
+
+    // Returns a copy of the creation property list of a datatype.
+    PropList getCreatePlist() const;
+
+    ///\brief Returns this class name.
+    virtual H5std_string
+    fromClass() const
+    {
+        return ("DataType");
+    }
+
+    // Creates a copy of an existing DataType using its id
+    DataType(const hid_t type_id);
+
+    // Default constructor
+    DataType();
+
+    // Determines whether this datatype has a binary object description.
+    bool hasBinaryDesc() const;
+
+    // Gets the datatype id.
+    virtual hid_t getId() const;
+
+    // Destructor: properly terminates access to this datatype.
+    virtual ~DataType();
+
+  protected:
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-	hid_t id;	// HDF5 datatype id
+    hid_t id; // HDF5 datatype id
 
-	// Sets the datatype id.
-	virtual void p_setId(const hid_t new_id);
+    // Returns an id of a type by decoding the binary object
+    // description of this datatype.
+    hid_t p_decode() const;
+
+    // Sets the datatype id.
+    virtual void p_setId(const hid_t new_id);
+
+    // Opens a datatype and returns the id.
+    hid_t p_opentype(const H5Location &loc, const char *dtype_name) const;
+
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 
-   private:
-	void p_commit(hid_t loc_id, const char* name);
-};
-#ifndef H5_NO_NAMESPACE
-}
-#endif
-#endif // __H5DataType_H
+  private:
+    // Buffer for binary object description of this datatype, allocated
+    // in DataType::encode and used in DataType::decode
+    unsigned char *encoded_buf;
+    size_t         buf_size;
+
+    // Friend function to set DataType id.  For library use only.
+    friend void f_DataType_setId(DataType *dtype, hid_t new_id);
+
+    void p_commit(hid_t loc_id, const char *name);
+
+}; // end of DataType
+} // namespace H5
+
+#endif // H5DataType_H
