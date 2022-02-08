@@ -166,8 +166,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 
 		std::cout << "Getting desc: " << i << std::endl;
 		String desc = info->getSourceNodeName() + "-" 
-					+ String(info->getSourceNodeId()) 
-					+  "_" + String(info->getStreamId())
+					+ String(info->getSourceNodeId())
 					+  "." + info->getStreamName();
 
 		std::cout << "Generated desc: " << desc << std::endl;
