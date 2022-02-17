@@ -59,6 +59,7 @@
 			Array<const SpikeChannel*> spikeChannels;
 
 			HeapBlock<double> tsBuffer;
+			HeapBlock<int64> smpBuffer;
 			size_t bufferSize;
 
 			String identifierText;

@@ -195,6 +195,9 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		if (dSet == nullptr) return false;
 		tsStruct->timestampDataSet = dSet;
 
+		dSet = createSampleNumberDataSet(basePath, CHUNK_XSIZE);
+		if (dSet == nullptr) return false;
+		tsStruct->sampleNumberDataSet = dSet;
 
 		dSet = createElectrodeDataSet(basePath, desc, CHUNK_XSIZE);
 		if (dSet == nullptr) return false;
@@ -482,6 +485,14 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		 continuousDataSets[datasetID]->numSamples += nSamples;
  }
 
+ void NWBFile::writeSampleNumbers(int datasetID, int nSamples, const int64* data)
+ {
+	 if (!continuousDataSets[datasetID])
+		 return;
+
+	 CHECK_ERROR(continuousDataSets[datasetID]->sampleNumberDataSet->writeDataBlock(nSamples, BaseDataType::I64, data));
+ }
+
  void NWBFile::writeTimestamps(int datasetID, int nSamples, const double* data)
  {
 	 if (!continuousDataSets[datasetID])
@@ -619,6 +630,20 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		  const int32 one = 1;
 		  CHECK_ERROR(setAttribute(BaseDataType::I32, &one, basePath + "/timestamps", "interval"));
 		  CHECK_ERROR(setAttributeStr("seconds", basePath + "/timestamps", "unit"));
+	  }
+	  return tsSet;
+  }
+
+   HDF5RecordingData* NWBFile::createSampleNumberDataSet(String basePath, int chunk_size)
+  {
+	  HDF5RecordingData* tsSet = createDataSet(BaseDataType::I64, 0, chunk_size, basePath + "/samples");
+	  if (!tsSet)
+		  std::cerr << "Error creating sample number dataset in " << basePath << std::endl;
+	  else
+	  {
+		  const int32 one = 1;
+		  CHECK_ERROR(setAttribute(BaseDataType::I32, &one, basePath + "/samples", "interval"));
+		  CHECK_ERROR(setAttributeStr("samples", basePath + "/samples", "unit"));
 	  }
 	  return tsSet;
   }

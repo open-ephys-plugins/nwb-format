@@ -38,6 +38,7 @@ namespace NWBRecording
 	public:
 		ScopedPointer<HDF5RecordingData> baseDataSet;
 		ScopedPointer<HDF5RecordingData> timestampDataSet;
+		ScopedPointer<HDF5RecordingData> sampleNumberDataSet;
 		ScopedPointer<HDF5RecordingData> electrodeDataSet;
 		//ScopedPointer<HDF5RecordingData> controlDataSet; //for all but spikes ... Removed in NWB2?
 		ScopedPointer<HDF5RecordingData> ttlWordDataSet; //just for ttl events
@@ -56,6 +57,7 @@ namespace NWBRecording
 		void stopRecording();
 		void writeData(int datasetID, int channel, int nSamples, const float* data, float bitVolts);
 		void writeTimestamps(int datasetID, int nSamples, const double* data);
+		void writeSampleNumbers(int datasetID, int nSamples, const int64* data);
 		void writeElectrodes(int datasetID, int start, int nElectrodes);
 		void writeSpike(int electrodeId, const SpikeChannel* channel, const Spike* event);
 		void writeEvent(int eventID, const EventChannel* channel, const Event* event);
@@ -76,6 +78,7 @@ namespace NWBRecording
 		bool createTimeSeriesBase(String basePath, String description, String neurodata_type);
 		bool createExtraInfo(String basePath, String name, String desc, String id, uint16 index, uint16 typeIndex);
 		HDF5RecordingData* createTimestampDataSet(String basePath, int chunk_size);
+		HDF5RecordingData* createSampleNumberDataSet(String basePath, int chunk_size);
 		HDF5RecordingData* createElectrodeDataSet(String basePath, String description, int chunk_size);
 		void createDataAttributes(String basePath, float conversion, float resolution, String unit);
 		bool createChannelMetadataSets(String basePath, const MetadataObject* info);

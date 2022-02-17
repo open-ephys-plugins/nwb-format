@@ -30,6 +30,7 @@
  {
 	 
 	 tsBuffer.malloc(MAX_BUFFER_SIZE);
+	 smpBuffer.malloc(MAX_BUFFER_SIZE);
  }
  
  NWBRecordEngine::~NWBRecordEngine()
@@ -148,9 +149,11 @@
 		 //Let's hope that the compiler is smart enough to vectorize this. 
 		 for (int i = 0; i < size; i++)
 		 {
-			 tsBuffer[i] = (baseTS + i) / fs;
+			 smpBuffer[i] = baseTS + i;
+			 tsBuffer[i] = smpBuffer[i] / fs;
 		 }
 		 recordFile->writeTimestamps(datasetIndexes[writeChannel], size, tsBuffer);
+		 recordFile->writeSampleNumbers(datasetIndexes[writeChannel], size, smpBuffer);
 	 }
 		 
  }
