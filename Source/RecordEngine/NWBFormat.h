@@ -56,6 +56,7 @@ namespace NWBRecording
 		void stopRecording();
 		void writeData(int datasetID, int channel, int nSamples, const float* data, float bitVolts);
 		void writeTimestamps(int datasetID, int nSamples, const double* data);
+		void writeElectrodes(int datasetID, int start, int nElectrodes);
 		void writeSpike(int electrodeId, const SpikeChannel* channel, const Spike* event);
 		void writeEvent(int eventID, const EventChannel* channel, const Event* event);
 		void writeTimestampSyncText(uint16 sourceID, int64 timestamp, float sourceSampleRate, String text);

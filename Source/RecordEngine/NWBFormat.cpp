@@ -146,6 +146,9 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 
 	int nRecordedStreams;
 	nRecordedStreams = continuousArray.size();
+
+	int totalElectrodeCount = 0;
+
 	for (int i = 0; i < nRecordedStreams; i++)
 	{
 
@@ -213,14 +216,18 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		}
 		*/
 		continuousDataSets.add(tsStruct.release());
+
+		int numElectrodesInStream = continuousArray.getReference(i).size();
+		writeElectrodes(i, totalElectrodeCount, numElectrodesInStream);
+		totalElectrodeCount += numElectrodesInStream;
 	}
 
-	int nRecordedElectrodes;
-	nRecordedElectrodes = electrodeArray.size();
+	int nRecordedSpikeElectrodes;
+	nRecordedSpikeElectrodes = electrodeArray.size();
 	std::unordered_set<String> spikeStreams;
 
 	String currentGroup = "";
-	for (int i = 0; i < nRecordedElectrodes; i++)
+	for (int i = 0; i < nRecordedSpikeElectrodes; i++)
 	{
 		const SpikeChannel* sourceInfo = electrodeArray[i];
 
@@ -483,6 +490,18 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 	 CHECK_ERROR(continuousDataSets[datasetID]->timestampDataSet->writeDataBlock(nSamples, BaseDataType::F64, data));
  }
 
+ void NWBFile::writeElectrodes(int datasetID, int start, int nElectrodes)
+ {
+	 if (!continuousDataSets[datasetID])
+		 return;
+
+	std::vector<int> electrodeNumbers;
+	for (int i = start; i < start + nElectrodes; i++)
+		electrodeNumbers.push_back(i);
+
+	 CHECK_ERROR(continuousDataSets[datasetID]->electrodeDataSet->writeDataBlock(nElectrodes, BaseDataType::I32, &electrodeNumbers[0]));
+ }
+
  void NWBFile::writeSpike(int electrodeId, const SpikeChannel* channel, const Spike* event)
  {
 	 if (!spikeDataSets[electrodeId])
@@ -606,7 +625,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 
   HDF5RecordingData *NWBFile::createElectrodeDataSet(String basePath, String description, int chunk_size)
 {
-	HDF5RecordingData *elSet = createDataSet(BaseDataType::F64, 1, chunk_size, basePath + "/electrodes");
+	HDF5RecordingData *elSet = createDataSet(BaseDataType::I32, 1, chunk_size, basePath + "/electrodes");
 	if (!elSet)
 		std::cerr << "Error creating electrode dataset in " << basePath << std::endl;
 	else
