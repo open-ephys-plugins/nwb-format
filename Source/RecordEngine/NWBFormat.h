@@ -73,7 +73,7 @@ namespace NWBRecording
 		void createTextDataSet(String path, String name, String text);
 		void createBinaryDataSet(String path, String name, HDF5FileBase::BaseDataType type, int length, void* data);
 		static HDF5FileBase::BaseDataType getEventH5Type(EventChannel::Type type, int length = 1);
-		static HDF5FileBase::BaseDataType getMetadataH5Type(MetadataDescriptor::MetadataTypes type, int length = 1);
+		static HDF5FileBase::BaseDataType getMetadataH5Type(MetadataDescriptor::MetadataType type, int length = 1);
 
 		bool createTimeSeriesBase(String basePath, String description, String neurodata_type);
 		bool createExtraInfo(String basePath, String name, String desc, String id, uint16 index, uint16 typeIndex);

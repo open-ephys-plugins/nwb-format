@@ -554,7 +554,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 	 switch (event->getEventType())
 	 {
 	 case EventChannel::TTL:
-		 ttlVal = (static_cast<const TTLEvent*>(event)->getState() ? 1 : -1) * (static_cast<const TTLEvent*>(event)->getBit() + 1);
+		 ttlVal = (static_cast<const TTLEvent*>(event)->getState() ? 1 : -1) * (static_cast<const TTLEvent*>(event)->getLine() + 1);
 		 dataSrc = &ttlVal;
 		 type = BaseDataType::I8;
 		 break;
@@ -576,7 +576,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 
 	 if (event->getEventType() == EventChannel::TTL)
 	 {
-		uint8 controlValue = static_cast<const TTLEvent*>(event)->getBit() + 1;
+		uint8 controlValue = static_cast<const TTLEvent*>(event)->getLine() + 1;
 	 	//CHECK_ERROR(eventDataSets[eventID]->controlDataSet->writeDataBlock(1, BaseDataType::U8, &controlValue));
 		CHECK_ERROR(eventDataSets[eventID]->ttlWordDataSet->writeDataBlock(1, BaseDataType::U8, static_cast<const TTLEvent*>(event)->getRawDataPointer()));
 	 }
@@ -803,7 +803,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		  return BaseDataType::I8;
 	  }
   }
-  NWBFile::BaseDataType NWBFile::getMetadataH5Type(MetadataDescriptor::MetadataTypes type, int length)
+  NWBFile::BaseDataType NWBFile::getMetadataH5Type(MetadataDescriptor::MetadataType type, int length)
   {
 	  switch (type)
 	  {

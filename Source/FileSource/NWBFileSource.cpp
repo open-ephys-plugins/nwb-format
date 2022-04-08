@@ -37,7 +37,7 @@ NWBFileSource::~NWBFileSource()
 {
 }
 
-bool NWBFileSource::Open(File file)
+bool NWBFileSource::open(File file)
 {
     ScopedPointer<H5File> tmpFile;
     Attribute ver;
@@ -230,7 +230,6 @@ void NWBFileSource::fillRecordInfo()
                         dataPaths.set(numRecords, continuousDataPath + String(processorName));
                         numRecords++;
 
-                        /* 
                         recordN = recordings.openGroup((String(i) + "/application_data").toUTF8());
                         try 
                         {
@@ -294,13 +293,14 @@ void NWBFileSource::fillRecordInfo()
     }
 }
 
-void NWBFileSource::updateActiveRecord()
+void NWBFileSource::updateActiveRecord(int index)
 {
 
-    samplePos=0;
+    samplePos = 0;
+    
     try
     {
-        String path = "/acquisition/" + dataPaths[activeRecord.get()] + "/data";
+        String path = "/acquisition/" + dataPaths[index] + "/data";
         dataSet = new DataSet(sourceFile->openDataSet(path.toUTF8()));
     }
     catch (FileIException error)
@@ -369,7 +369,7 @@ int NWBFileSource::readData(int16* buffer, int nSamples)
 void NWBFileSource::processChannelData(int16* inBuffer, float* outBuffer, int channel, int64 numSamples)
 {
     int n = getActiveNumChannels();
-    float bitVolts = getChannelInfo(channel).bitVolts;
+    float bitVolts = getChannelInfo(activeRecord.get(), channel).bitVolts;
 
     for (int i=0; i < numSamples; i++)
     {

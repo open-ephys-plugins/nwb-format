@@ -118,49 +118,39 @@
 	 recordFile->stopRecording();
 	 recordFile->close();
 	 recordFile = nullptr;
-	 resetChannels();
+     spikeChannels.clear();
+     eventChannels.clear();
+     continuousChannels.clear();
+     datasetIndexes.clear();
+     writeChannelIndexes.clear();
+     tsBuffer.malloc(MAX_BUFFER_SIZE);
+     bufferSize = MAX_BUFFER_SIZE;
  }
-
 
  
- void NWBRecordEngine::resetChannels()
- {
-	 spikeChannels.clear();
-	 eventChannels.clear();
-	 continuousChannels.clear();
-	 datasetIndexes.clear();
-	 writeChannelIndexes.clear();
-	 tsBuffer.malloc(MAX_BUFFER_SIZE);
-	 bufferSize = MAX_BUFFER_SIZE;
- }
- 
- void NWBRecordEngine::writeData(int writeChannel, int realChannel, const float* buffer, int size)
- {
 
-	 recordFile->writeData(datasetIndexes[writeChannel], writeChannelIndexes[writeChannel], size, buffer, getContinuousChannel(realChannel)->getBitVolts());
-
-	 /* All channels in a dataset have the same number of samples and share timestamps. But since this method is called 
-		asynchronously, the timestamps might not be in sync during acquisition, so we chose a channel and write the
-		timestamps when writing that channel's data */
-	 if (writeChannelIndexes[writeChannel] == 0)
-	 {
-		 int64 baseTS = getTimestamp(writeChannel);
-		 double fs = getContinuousChannel(realChannel)->getSampleRate();
-		 //Let's hope that the compiler is smart enough to vectorize this. 
-		 for (int i = 0; i < size; i++)
-		 {
-			 smpBuffer[i] = baseTS + i;
-			 tsBuffer[i] = smpBuffer[i] / fs;
-		 }
-		 recordFile->writeTimestamps(datasetIndexes[writeChannel], size, tsBuffer);
-		 recordFile->writeSampleNumbers(datasetIndexes[writeChannel], size, smpBuffer);
-	 }
-		 
- }
-
-void NWBRecordEngine::writeSynchronizedData(int writeChannel, int realChannel, const float* dataBuffer, const double* ftsBuffer, int size)
+void NWBRecordEngine::writeContinuousData(int writeChannel,
+                                          int realChannel,
+                                          const float* dataBuffer,
+                                          const double* timestampBuffer,
+                                          int size)
 {
-	//empty;
+    recordFile->writeData(datasetIndexes[writeChannel], writeChannelIndexes[writeChannel], size, dataBuffer, getContinuousChannel(realChannel)->getBitVolts());
+
+    /* All channels in a dataset have the same number of samples and share timestamps. But since this method is called asynchronously, the timestamps might not be in sync during acquisition, so we chose a channel and write the timestamps when writing that channel's data */
+    if (writeChannelIndexes[writeChannel] == 0)
+    {
+        int64 baseTS = getTimestamp(writeChannel);
+        double fs = getContinuousChannel(realChannel)->getSampleRate();
+        //Let's hope that the compiler is smart enough to vectorize this.
+        for (int i = 0; i < size; i++)
+        {
+            smpBuffer[i] = baseTS + i;
+            tsBuffer[i] = smpBuffer[i] / fs;
+        }
+        recordFile->writeTimestamps(datasetIndexes[writeChannel], size, tsBuffer);
+        recordFile->writeSampleNumbers(datasetIndexes[writeChannel], size, smpBuffer);
+    }
 }
  
 void NWBRecordEngine::writeEvent(int eventIndex, const MidiMessage& event) 
@@ -177,11 +167,6 @@ void NWBRecordEngine::writeTimestampSyncText(uint64 streamId, int64 timestamp, f
 	//recordFile->writeTimestampSyncText(streamId, timestamp, sourceSampleRate, text);
 }
 
-/*
-void NWBRecordEngine::addSpikeElectrode(int index,const  SpikeChannel* elec) 
-{
-}
-*/
 
 void NWBRecordEngine::writeSpike(int electrodeIndex, const Spike* spike) 
 {
