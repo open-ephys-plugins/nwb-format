@@ -49,16 +49,6 @@
 	 bufferSize = MAX_BUFFER_SIZE;
  }
  
- NWBFile::~NWBFile()
- {
- }
-
-
- void NWBFile::setXmlText(const String& xmlText)
- {
-	 this->xmlText = &xmlText;
- }
-
 int NWBFile::createFileStructure()
 {
 
@@ -142,27 +132,18 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 	for (int i = 0; i < nRecordedStreams; i++)
 	{
 
-		//All channels in a group will share the same source information (any caller to this method MUST assure this happen
-		//so we just pick the first channel.
+		//All channels in a group will share the same source information (any caller to this method MUST assure this happen), so we just need to look at the first channel
 		const ContinuousChannel* info = continuousArray.getReference(i)[0];
-		/*
-		basePath = rootPath + "/continuous/processor" + String(info->getNodeId()) + "_" + String(info->getStreamId());
-		//if (info->getSourceSubprocessorCount() > 1) basePath += "." + String(info->getSubProcessorIdx());
-		String name = info->getNodeName() + " (" + String(info->getNodeId()) + ") From " + info->getSourceNodeName() + " (" + String(info->getSourceNodeId());
-		name += "." + String(info->getStreamId());
-		ancestry.clearQuick();
-		name += ")";
-		ancestry.add("Timeseries");
-		ancestry.add("ElectricalSeries");
-		if (!createTimeSeriesBase(basePath, name, "Stores acquired voltage data from extracellular recordings", "", ancestry)) return false;
-		*/
 
 		//std::cout << "Getting desc: " << i << std::endl;
 		String desc = info->getSourceNodeName() + "-" 
 					+ String(info->getSourceNodeId())
 					+  "." + info->getStreamName();
+        
+        if (recordingNumber > 0)
+            desc += "_" + String(recordingNumber + 1);
 
-		//std::cout << "Generated desc: " << desc << std::endl;
+		std::cout << "Generated desc: " << desc << std::endl;
 	
 		basePath = rootPath + desc;
 		if (!createTimeSeriesBase(basePath, "Stores voltage data from extracellular recordings", "")) return false;
@@ -170,7 +151,8 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		tsStruct = new TimeSeries();
 		tsStruct->basePath = basePath;
 		dSet = createDataSet(BaseDataType::I16, 0, continuousArray.getReference(i).size(), CHUNK_XSIZE, basePath + "/data");
-		if (dSet == nullptr)
+		
+        if (dSet == nullptr)
 		{
 			std::cerr << "Error creating dataset for " << desc << std::endl;
 			return false;
@@ -193,21 +175,6 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		if (dSet == nullptr) return false;
 		tsStruct->electrodeDataSet = dSet;
 
-		//TODO: Where does this go in NWB2? 
-			//TODO: Where does this go in NWB2? 
-		//TODO: Where does this go in NWB2? 
-		/*
-		basePath = basePath + "/oe_extra_info";
-		if (createGroup(basePath)) return false;
-		int nChans = continuousArray.getReference(i).size();
-		for (int j = 0; j < nChans; j++)
-		{
-			String channelPath = basePath + "/channel" + String(j + 1);
-			const ContinuousChannel* chan = continuousArray.getReference(i)[j];
-			createExtraInfo(channelPath, chan->getName(), chan->getDescription(), chan->getIdentifier(), chan->getLocalIndex(), chan->getChannelType());
-			createChannelMetadataSets(channelPath + "/channel_metadata", chan);
-		}
-		*/
 		continuousDataSets.add(tsStruct.release());
 
 		int numElectrodesInStream = continuousArray.getReference(i).size();
@@ -226,6 +193,10 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 
 		String sourceName = sourceInfo->getSourceNodeName() + "-" + String(sourceInfo->getSourceNodeId());
 		sourceName += "." + sourceInfo->getStreamName();
+        
+        if (recordingNumber > 0)
+            sourceName += "_" + String(recordingNumber + 1);
+        
 		basePath = rootPath + sourceName + ".spikes";
 
 		//Check if we have found a new stream
@@ -261,13 +232,6 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		if (dSet == nullptr) return false;
 		tsStruct->timestampDataSet = dSet;
 
-		/*
-		basePath = basePath + "/oe_extra_info";
-		createExtraInfo(basePath, info->getName(), info->getDescription(), info->getIdentifier(), info->getLocalIndex(), info->getChannelType());
-		createChannelMetadataSets(basePath + "/channel_metadata", info);
-		createEventMetadataSets(basePath + "/spike_metadata", tsStruct, info);
-		*/
-
 		spikeDataSets.add(tsStruct.release());
 
 	}
@@ -283,6 +247,10 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		const EventChannel* info = eventArray[i];
 		String sourceName = info->getSourceNodeName() + "-" + String(info->getSourceNodeId());
 		sourceName += "." + info->getStreamName();
+        
+        if (recordingNumber > 0)
+            sourceName += "_" + String(recordingNumber + 1);
+        
 		//sourceName = sourceName + "." + String(info->getStreamId());
 
 		//basePath = rootPath + sourceName + "_events";
@@ -356,11 +324,6 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		dSet = createTimestampDataSet(basePath, EVENT_CHUNK_SIZE);
 		if (dSet == nullptr) return false;
 		tsStruct->timestampDataSet = dSet;
-		/*
-		dSet = createDataSet(BaseDataType::U8, 0, EVENT_CHUNK_SIZE, basePath + "/control");
-		if (dSet == nullptr) return false;
-		tsStruct->controlDataSet = dSet;
-		*/
 
 		if (info->getType() == EventChannel::TTL)
 		{
@@ -368,19 +331,15 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 			if (dSet == nullptr) return false;
 			tsStruct->ttlWordDataSet = dSet;
 		}
-
-		/*
-		basePath = basePath + "/oe_extra_info";
-		createExtraInfo(basePath, info->getName(), info->getDescription(), info->getIdentifier(), info->getLocalIndex(), info->getType());
-		createChannelMetadataSets(basePath + "/channel_metadata", info);
-		createEventMetadataSets(basePath + "/event_metadata", tsStruct, info);
-		*/
 		eventDataSets.add(tsStruct.release());
 
 	}
 	
-	//basePath = rootPath + "/events/sync_messages";
 	basePath = rootPath + "sync_messages";
+    
+    if (recordingNumber > 0)
+        basePath += "_" + String(recordingNumber + 1);
+    
 	ancestry.clearQuick();
 	ancestry.add("Timeseries");
 	ancestry.add("AnnotationSeries");
@@ -403,12 +362,6 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 	dSet = createTimestampDataSet(basePath, 1);
 	if (dSet == nullptr) return false;
 	tsStruct->timestampDataSet = dSet;
-
-	/*
-	dSet = createDataSet(BaseDataType::U8, 0, 1, basePath + "/control");
-	if (dSet == nullptr) return false;
-	tsStruct->controlDataSet = dSet;
-	*/
 
 	syncMsgDataSet = tsStruct;
 
@@ -521,7 +474,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 	 FloatVectorOperations::copyWithMultiply(scaledBuffer.getData(), event->getDataPointer(), multFactor, nSamples);
 	 AudioDataConverters::convertFloatToInt16LE(scaledBuffer.getData(), intBuffer.getData(), nSamples);
 
-	 double timestampSec = event->getTimestamp() / channel->getSampleRate();
+	 double timestampSec = event->getTimestampInSeconds();
 
 	 CHECK_ERROR(spikeDataSets[electrodeId]->baseDataSet->writeDataBlock(1, BaseDataType::I16, intBuffer));
 	 CHECK_ERROR(spikeDataSets[electrodeId]->timestampDataSet->writeDataBlock(1, BaseDataType::F64, &timestampSec));
@@ -560,7 +513,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 	 }
 	 CHECK_ERROR(eventDataSets[eventID]->baseDataSet->writeDataBlock(1, type, dataSrc));
 
-	 double timeSec = event->getTimestamp() / channel->getSampleRate();
+	 double timeSec = event->getTimestampInSeconds();
 
 	 CHECK_ERROR(eventDataSets[eventID]->timestampDataSet->writeDataBlock(1, BaseDataType::F64, &timeSec));
 

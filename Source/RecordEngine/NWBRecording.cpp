@@ -55,7 +55,6 @@
      }
      
 	 recordFile = new NWBFile(basepath, CoreServices::getGUIVersion(), identifierText);
-	 recordFile->setXmlText(getLatestSettingsXml());
 
 	 datasetIndexes.insertMultiple(0, 0, getNumRecordedContinuousChannels());
 	 writeChannelIndexes.insertMultiple(0, 0, getNumRecordedContinuousChannels());

@@ -32,7 +32,9 @@ using namespace OpenEphysHDF5;
 
 namespace NWBRecording
 {
-	typedef Array<const ContinuousChannel*> ContinuousGroup;
+
+    typedef Array<const ContinuousChannel*> ContinuousGroup;
+
 	class TimeSeries
 	{
 	public:
@@ -40,53 +42,109 @@ namespace NWBRecording
 		ScopedPointer<HDF5RecordingData> timestampDataSet;
 		ScopedPointer<HDF5RecordingData> sampleNumberDataSet;
 		ScopedPointer<HDF5RecordingData> electrodeDataSet;
-		//ScopedPointer<HDF5RecordingData> controlDataSet; //for all but spikes ... Removed in NWB2?
-		ScopedPointer<HDF5RecordingData> ttlWordDataSet; //just for ttl events
+		ScopedPointer<HDF5RecordingData> ttlWordDataSet;
 		OwnedArray<HDF5RecordingData> metaDataSet;
 		String basePath;
 		uint64 numSamples{ 0 };
 	};
 
+    /**
+        
+        Represents an NWB 2.0 File (a specific type of HDF5 file)
+            
+     */
 	class NWBFile : public HDF5FileBase
 	{
 	public:
-		NWBFile(String fName, String ver, String idText); //with whatever arguments it's necessary
-		~NWBFile();
-		bool startNewRecording(int recordingNumber, const Array<ContinuousGroup>& continuousArray,
-			const Array<const EventChannel*>& eventArray, const Array<const SpikeChannel*>& electrodeArray);
+        
+        /** Constructor */
+		NWBFile(String fName, String ver, String identifier);
+        
+        /** Destructor */
+        ~NWBFile() { }
+        
+        /** Creates the groups required for a new recording, given an array of continuous channels, event channels, and spike channels*/
+		bool startNewRecording(int recordingNumber,
+                               const Array<ContinuousGroup>& continuousArray,
+                               const Array<const EventChannel*>& eventArray,
+                               const Array<const SpikeChannel*>& electrodeArray);
+        
+        /** Writes the num_samples value and closes the relevent datasets */
 		void stopRecording();
+        
+        /** Writes continuous data for a particular channel */
 		void writeData(int datasetID, int channel, int nSamples, const float* data, float bitVolts);
+        
+        /** Writes synchronized timestamps for a particular continuous dataset */
 		void writeTimestamps(int datasetID, int nSamples, const double* data);
+        
+        /** Writes sample numbers for a particular continuous dataset */
 		void writeSampleNumbers(int datasetID, int nSamples, const int64* data);
+        
+        /** Writes electrode numbers for a continuous dataset */
 		void writeElectrodes(int datasetID, int start, int nElectrodes);
+        
+        /** Writes a spike event*/
 		void writeSpike(int electrodeId, const SpikeChannel* channel, const Spike* event);
+        
+        /** Writes an event (TEXT or TTL) */
 		void writeEvent(int eventID, const EventChannel* channel, const Event* event);
-		void writeTimestampSyncText(uint16 sourceID, int64 timestamp, float sourceSampleRate, String text);
+        
+        /** Writes a timestamp sync text event */
+		void writeTimestampSyncText(uint16 sourceID,
+                                    int64 timestamp,
+                                    float sourceSampleRate,
+                                    String text);
+        
+        /** Returns the name of this NWB file */
 		String getFileName() override;
-		void setXmlText(const String& xmlText);
 
 	protected:
+        
+        /** Initializes the default groups */
 		int createFileStructure() override;
 
 	private:
 
+        /** Creates a new dataset to hold text data (messages) */
 		void createTextDataSet(String path, String name, String text);
+        
+        /** Creates a new dataset to hold binary events */
 		void createBinaryDataSet(String path, String name, HDF5FileBase::BaseDataType type, int length, void* data);
+        
+        /** Returns the HDF5 data type for a given event channel type */
 		static HDF5FileBase::BaseDataType getEventH5Type(EventChannel::Type type, int length = 1);
-		static HDF5FileBase::BaseDataType getMetadataH5Type(MetadataDescriptor::MetadataType type, int length = 1);
+		
+        /** Returns the HDF5 data type for a given metadata type*/
+        static HDF5FileBase::BaseDataType getMetadataH5Type(MetadataDescriptor::MetadataType type, int length = 1);
 
+        /** Creates a time series dataset*/
 		bool createTimeSeriesBase(String basePath, String description, String neurodata_type);
-		bool createExtraInfo(String basePath, String name, String desc, String id, uint16 index, uint16 typeIndex);
+		
+        /** Creates dataset attributes */
+        bool createExtraInfo(String basePath, String name, String desc, String id, uint16 index, uint16 typeIndex);
+        
+        /** Creates a dataset of synchronized timestamps */
 		HDF5RecordingData* createTimestampDataSet(String basePath, int chunk_size);
+        
+        /** Creates a dataset of sample numbers */
 		HDF5RecordingData* createSampleNumberDataSet(String basePath, int chunk_size);
+        
+        /** Creates a dataset for electrode indices */
 		HDF5RecordingData* createElectrodeDataSet(String basePath, String description, int chunk_size);
-		void createDataAttributes(String basePath, float conversion, float resolution, String unit);
-		bool createChannelMetadataSets(String basePath, const MetadataObject* info);
-		bool createEventMetadataSets(String basePath, TimeSeries* timeSeries, const MetadataEventObject* info);
+		
+        /** Adds attributes (e.g. conversion, resolution) to a continuous dataset */
+        void createDataAttributes(String basePath, float conversion, float resolution, String unit);
+		
+        /** Creates a dataset for channel metdata */
+        bool createChannelMetadataSets(String basePath, const MetadataObject* info);
+		
+        /** Creates a dataset for event metdata */
+        bool createEventMetadataSets(String basePath, TimeSeries* timeSeries, const MetadataEventObject* info);
 
+        /** Writes metadata associated with an event*/
 		void writeEventMetadata(TimeSeries* timeSeries, const MetadataEventObject* info, const MetadataEvent* event);
 		
-
 		const String filename;
 		const String GUIVersion;
 
@@ -95,7 +153,6 @@ namespace NWBRecording
 		OwnedArray<TimeSeries> eventDataSets;
 		ScopedPointer<TimeSeries> syncMsgDataSet;
 
-		const String* xmlText;
 		const String identifierText;
 
 		HeapBlock<float> scaledBuffer;
