@@ -90,7 +90,7 @@ int NWBFile::createFileStructure()
 	createTextDataSet("", "timestamps_reference_time", time);
 
 	/*
-	CHECK_ERROR(setAttributeStr(String("OpenEphys GUI v") + GUIVersion, "/general/data_collection", "software"));
+	CHECK_ERROR(setAttributeStr(String("Open Ephys GUI v") + GUIVersion, "/general/data_collection", "software"));
 	CHECK_ERROR(setAttributeStr(*xmlText, "/general/data_collection", "configuration"));
 	*/
 
@@ -143,7 +143,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
         if (recordingNumber > 0)
             desc += "_" + String(recordingNumber + 1);
 
-		std::cout << "Generated desc: " << desc << std::endl;
+		//std::cout << "Generated desc: " << desc << std::endl;
 	
 		basePath = rootPath + desc;
 		if (!createTimeSeriesBase(basePath, "Stores voltage data from extracellular recordings", "")) return false;
@@ -182,11 +182,14 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		totalElectrodeCount += numElectrodesInStream;
 	}
 
+	//std::cout << "Created continuous channels " << std::endl;
+
 	int nRecordedSpikeElectrodes;
 	nRecordedSpikeElectrodes = electrodeArray.size();
 	std::unordered_set<String> spikeStreams;
 
 	String currentGroup = "";
+	
 	for (int i = 0; i < nRecordedSpikeElectrodes; i++)
 	{
 		const SpikeChannel* sourceInfo = electrodeArray[i];
@@ -235,11 +238,14 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		spikeDataSets.add(tsStruct.release());
 
 	}
+
+	//std::cout << "Created spike channels " << std::endl;
 	
 	int nEvents = eventArray.size();
 	int nTTL = 0;
 	int nTXT = 0;
 	int nBIN = 0;
+	
 	for (int i = 0; i < nEvents; i++)
 	{
 
@@ -250,15 +256,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
         
         if (recordingNumber > 0)
             sourceName += "_" + String(recordingNumber + 1);
-        
-		//sourceName = sourceName + "." + String(info->getStreamId());
 
-		//basePath = rootPath + sourceName + "_events";
-
-		/*
-		ancestry.clearQuick();
-		ancestry.add("Timeseries");
-		*/
 		String series;
 
 		String helpText;
@@ -281,6 +279,8 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 			//basePath = basePath + "/text" + String(nTXT);
 			//ancestry.add("AnnotationSeries");
 			basePath += "messages";
+			if (recordingNumber > 0)
+				basePath += "_" + String(recordingNumber + 1);
 			series = "AnnotationSeries";
 			helpText = "Time-stamped annotations about an experiment";
 			break;
@@ -334,11 +334,15 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		eventDataSets.add(tsStruct.release());
 
 	}
+
+	//std::cout << "Created event channels " << std::endl;
 	
 	basePath = rootPath + "sync_messages";
     
     if (recordingNumber > 0)
         basePath += "_" + String(recordingNumber + 1);
+
+	//std::cout << "Sync messages: " << basePath << std::endl;
     
 	ancestry.clearQuick();
 	ancestry.add("Timeseries");
@@ -416,7 +420,8 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 	 FloatVectorOperations::copyWithMultiply(scaledBuffer.getData(), data, multFactor, nSamples);
 	 AudioDataConverters::convertFloatToInt16LE(scaledBuffer.getData(), intBuffer.getData(), nSamples);
 
-	 CHECK_ERROR(continuousDataSets[datasetID]->baseDataSet->writeDataRow(channel, nSamples, BaseDataType::I16, intBuffer));
+	 continuousDataSets[datasetID]->baseDataSet->writeDataRow(channel, nSamples, BaseDataType::I16, intBuffer);
+	 //CHECK_ERROR();
 	 
 	 /* Since channels are filled asynchronouysly by the Record Thread, there is no guarantee
 		that at a any point in time all channels in a dataset have the same number of filled samples.
