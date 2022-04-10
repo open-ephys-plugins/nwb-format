@@ -82,13 +82,11 @@ private:
     Array<int> datasetIndexes;
     Array<int> writeChannelIndexes;
 
-    Array<ContinuousGroup> continuousChannels;
+    Array<ContinuousGroup> continuousChannelGroups;
     Array<const EventChannel*> eventChannels;
     Array<const SpikeChannel*> spikeChannels;
 
-    HeapBlock<double> tsBuffer;
     HeapBlock<int64> smpBuffer;
-    size_t bufferSize;
 
     String identifierText;
     

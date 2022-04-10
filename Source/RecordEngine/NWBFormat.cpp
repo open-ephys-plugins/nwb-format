@@ -77,22 +77,6 @@ int NWBFile::createFileStructure()
 	if (createGroup("general/extracellular_ephys")) return -1;
 	createTextDataSet("general", "institution", " ");
 	createTextDataSet("general", "session_id", " ");
-
-	/* Not found in notebook example
-	createTextDataSet("general", "lab", " ");
-	createTextDataSet("general", "surgery", " ");
-
-	if (createGroup("general/LabMetaData")) return -1;
-	if (createGroup("general/subject")) return -1;
-	createTextDataSet("general/subject", "date_of_birth", " ");
-	createTextDataSet("general/subject", "description", " ");
-	createTextDataSet("general/subject", "genotype", " ");
-	createTextDataSet("general/subject", "sex", " ");
-	createTextDataSet("general/subject", "species", " ");
-	createTextDataSet("general/subject", "subject_id", " ");
-	createTextDataSet("general/subject", "weight", " ");
-	*/
-
 	createTextDataSet("", "identifier", identifierText);
 
 	if (createGroup("/processing")) return -1;
@@ -102,7 +86,13 @@ int NWBFile::createFileStructure()
 	createTextDataSet("", "session_start_time", time);
 
 	if (createGroup("/specifications")) return -1;
-
+    if (createGroup("specifications/core")) return -1;
+    if (createGroup("specifications/core/2.4.0")) return -1;
+    if (createGroup("specifications/hdmf-common")) return -1;
+    if (createGroup("specifications/hdmf-common/1.5.1")) return -1;
+    if (createGroup("specifications/hdmf-experimental")) return -1;
+    if (createGroup("specifications/hdmf-experimental/0.2.0")) return -1;
+    
 	if (createGroup("/stimulus")) return -1;
 	if (createGroup("/stimulus/presentation")) return -1;
 	if (createGroup("/stimulus/templates")) return -1;
@@ -167,15 +157,15 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		if (!createTimeSeriesBase(basePath, name, "Stores acquired voltage data from extracellular recordings", "", ancestry)) return false;
 		*/
 
-		std::cout << "Getting desc: " << i << std::endl;
+		//std::cout << "Getting desc: " << i << std::endl;
 		String desc = info->getSourceNodeName() + "-" 
 					+ String(info->getSourceNodeId())
 					+  "." + info->getStreamName();
 
-		std::cout << "Generated desc: " << desc << std::endl;
+		//std::cout << "Generated desc: " << desc << std::endl;
 	
 		basePath = rootPath + desc;
-		if (!createTimeSeriesBase(basePath, "Stores acquired colate data from extracellular recordings", "")) return false;
+		if (!createTimeSeriesBase(basePath, "Stores voltage data from extracellular recordings", "")) return false;
 
 		tsStruct = new TimeSeries();
 		tsStruct->basePath = basePath;
@@ -587,9 +577,9 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
  void NWBFile::writeTimestampSyncText(uint16 sourceID, int64 timestamp, float sourceSampleRate, String text)
  {
 	 CHECK_ERROR(syncMsgDataSet->baseDataSet->writeDataBlock(1, BaseDataType::STR(text.length()), text.toUTF8()));
-	 double timeSec = timestamp / sourceSampleRate;
-	 CHECK_ERROR(syncMsgDataSet->timestampDataSet->writeDataBlock(1, BaseDataType::F64, &timeSec));
-	 //CHECK_ERROR(syncMsgDataSet->controlDataSet->writeDataBlock(1, BaseDataType::U8, &sourceID));
+     
+     double ts = (double) timestamp;
+	 CHECK_ERROR(syncMsgDataSet->timestampDataSet->writeDataBlock(1, BaseDataType::F64, &ts));
 	 syncMsgDataSet->numSamples += 1;
  }
 
@@ -602,12 +592,8 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
   bool NWBFile::createTimeSeriesBase(String basePath, String description, String neurodata_type)
  {
 	 if (createGroup(basePath)) return false;
-	 //CHECK_ERROR(setAttributeStrArray(ancestry, basePath, "ancestry"));
 	 CHECK_ERROR(setAttributeStr(" ", basePath, "comments"));
 	 CHECK_ERROR(setAttributeStr(description, basePath, "description"));
-	 //CHECK_ERROR(setAttributeStr("TimeSeries", basePath, "neurodata_type"));
-	 //CHECK_ERROR(setAttributeStr(source, basePath, "source"));
-	 //CHECK_ERROR(setAttributeStr(helpText, basePath, "help"));
 	 CHECK_ERROR(setAttributeStr("core", basePath, "namespace"));
 	 CHECK_ERROR(setAttributeStr(neurodata_type, basePath, "neurodata_type"));
 	 return true;

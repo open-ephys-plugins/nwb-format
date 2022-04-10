@@ -28,9 +28,9 @@
  
  NWBRecordEngine::NWBRecordEngine() 
  {
-	 
-	 tsBuffer.malloc(MAX_BUFFER_SIZE);
 	 smpBuffer.malloc(MAX_BUFFER_SIZE);
+     
+     
  }
  
  NWBRecordEngine::~NWBRecordEngine()
@@ -46,55 +46,60 @@
  {
 	 
 	 //Called when acquisition starts, to open the files
-	 String basepath = rootFolder.getFullPathName() + rootFolder.getSeparatorString() + "experiment_" + String(experimentNumber) + ".nwb";
-	 
+	 String basepath = rootFolder.getFullPathName() + rootFolder.getSeparatorString() + "experiment" + String(experimentNumber) + ".nwb";
+     
+     if (!File(basepath).exists())
+     {
+         Uuid identifier;
+         identifierText = identifier.toString();
+     }
+     
 	 recordFile = new NWBFile(basepath, CoreServices::getGUIVersion(), identifierText);
 	 recordFile->setXmlText(getLatestSettingsXml());
 
-	 int recProcs = getNumRecordedProcessors();
-
 	 datasetIndexes.insertMultiple(0, 0, getNumRecordedContinuousChannels());
 	 writeChannelIndexes.insertMultiple(0, 0, getNumRecordedContinuousChannels());
+     continuousChannelGroups.clear();
 
 	 //Generate the continuous datasets info array, seeking for different combinations of recorded processor and source processor
-	 int lastId = 0;
-	 for (int proc = 0; proc < recProcs; proc++)
-	 {
-		 const RecordProcessorInfo& procInfo = getProcessorInfo(proc);
-		 int recChans = procInfo.recordedChannels.size();
-		 for (int chan = 0; chan < recChans; chan++)
-		 {
-			 int recordedChan = procInfo.recordedChannels[chan];
-			 int realChan = getRealChannel(recordedChan);
-			 const ContinuousChannel* channelInfo = getContinuousChannel(realChan);
-			 int sourceId = channelInfo->getSourceNodeId();
-			 int streamId = channelInfo->getStreamId();
-			 int nInfoArrays = continuousChannels.size();
-			 bool found = false;
-			 for (int i = lastId; i < nInfoArrays; i++)
-			 {
-				 if (sourceId == continuousChannels.getReference(i)[0]->getSourceNodeId() && streamId == continuousChannels.getReference(i)[0]->getStreamId())
-				 {
-					 //A dataset for the current processor from the current source is already present
-					 writeChannelIndexes.set(recordedChan, continuousChannels.getReference(i).size());
-					 continuousChannels.getReference(i).add(getContinuousChannel(realChan));
-					 datasetIndexes.set(recordedChan, i);
-					 found = true;
-					 break;
-				 }
-			 }
-			 if (!found) //a new dataset must be created
-			 {
-				 ContinuousGroup newGroup;
-				 newGroup.add(getContinuousChannel(realChan));
-				 continuousChannels.add(newGroup);
-				 datasetIndexes.set(recordedChan, nInfoArrays);
-				 writeChannelIndexes.set(recordedChan, 0);
-			 }
+     Array<const ContinuousChannel*> firstChannels;
+     Array<int> channelCounts;
+     
+     int streamIndex = -1;
+     int streamChannelCount = 0;
+	 
+     for (int ch = 0; ch < getNumRecordedContinuousChannels(); ch++)
+     {
 
-		 }
-		 lastId = continuousChannels.size();
+         int globalIndex = getGlobalIndex(ch); // the global channel index
+         int localIndex = getLocalIndex(ch); // the local channel index (within a stream)
+         
+         const ContinuousChannel* channelInfo = getContinuousChannel(globalIndex); // channel info object
+		 
+         int sourceId = channelInfo->getSourceNodeId();
+         int streamId = channelInfo->getStreamId();
+
+         if (localIndex == 0)
+         {
+             firstChannels.add(channelInfo);
+             streamIndex++;
+             
+             if (streamIndex > 0)
+             {
+                 channelCounts.add(streamChannelCount);
+             }
+                 
+             ContinuousGroup newGroup;
+             newGroup.add(channelInfo);
+             continuousChannelGroups.add(newGroup);
+
+             streamChannelCount = 0;
+         }
+         
+         datasetIndexes.set(ch, streamIndex);
+         writeChannelIndexes.set(ch, localIndex);
 	 }
+     
 	 int nEvents = getNumRecordedEventChannels();
 	 for (int i = 0; i < nEvents; i++)
 		 eventChannels.add(getEventChannel(i));
@@ -104,10 +109,10 @@
 		 spikeChannels.add(getSpikeChannel(i));
 
 	 //open the file
-	 recordFile->open(getNumRecordedContinuousChannels() + continuousChannels.size() + eventChannels.size() + spikeChannels.size()); //total channels + timestamp arrays, to create a big enough buffer
+	 recordFile->open(getNumRecordedContinuousChannels() + continuousChannelGroups.size() + eventChannels.size() + spikeChannels.size()); //total channels + timestamp arrays, to create a big enough buffer
 
 	 //create the recording
-	 recordFile->startNewRecording(recordingNumber, continuousChannels, eventChannels, spikeChannels);
+	 recordFile->startNewRecording(recordingNumber, continuousChannelGroups, eventChannels, spikeChannels);
 	
  }
 
@@ -120,11 +125,9 @@
 	 recordFile = nullptr;
      spikeChannels.clear();
      eventChannels.clear();
-     continuousChannels.clear();
+     continuousChannelGroups.clear();
      datasetIndexes.clear();
      writeChannelIndexes.clear();
-     tsBuffer.malloc(MAX_BUFFER_SIZE);
-     bufferSize = MAX_BUFFER_SIZE;
  }
 
  
@@ -141,14 +144,13 @@ void NWBRecordEngine::writeContinuousData(int writeChannel,
     if (writeChannelIndexes[writeChannel] == 0)
     {
         int64 baseTS = getTimestamp(writeChannel);
-        double fs = getContinuousChannel(realChannel)->getSampleRate();
-        //Let's hope that the compiler is smart enough to vectorize this.
+        
         for (int i = 0; i < size; i++)
         {
             smpBuffer[i] = baseTS + i;
-            tsBuffer[i] = smpBuffer[i] / fs;
         }
-        recordFile->writeTimestamps(datasetIndexes[writeChannel], size, tsBuffer);
+        
+        recordFile->writeTimestamps(datasetIndexes[writeChannel], size, timestampBuffer);
         recordFile->writeSampleNumbers(datasetIndexes[writeChannel], size, smpBuffer);
     }
 }
@@ -163,8 +165,7 @@ void NWBRecordEngine::writeEvent(int eventIndex, const MidiMessage& event)
 
 void NWBRecordEngine::writeTimestampSyncText(uint64 streamId, int64 timestamp, float sourceSampleRate, String text)
 {
-	//FIXME: ???
-	//recordFile->writeTimestampSyncText(streamId, timestamp, sourceSampleRate, text);
+	recordFile->writeTimestampSyncText(streamId, timestamp, sourceSampleRate, text);
 }
 
 

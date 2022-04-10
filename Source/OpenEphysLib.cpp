@@ -55,7 +55,7 @@ extern "C" EXPORT int getPluginInfo(int index, Plugin::PluginInfo* info)
 		break;
 	case 1:
 		info->type = Plugin::FILE_SOURCE;
-		info->fileSource.name = "NWB file";
+		info->fileSource.name = "NWB File";
 		info->fileSource.creator = &(Plugin::createFileSource<NWBFileSource>);
 		info->fileSource.extensions = "nwb";
 		break;
