@@ -35,16 +35,35 @@ namespace NWBRecording
 
     typedef Array<const ContinuousChannel*> ContinuousGroup;
 
+    /**
+        Represents an NWB TimeSeries dataset
+     */
 	class TimeSeries
 	{
 	public:
+        
+        /** Holds the sample data */
 		ScopedPointer<HDF5RecordingData> baseDataSet;
+        
+        /** Holds the timestamps (in seconds) for each sample */
 		ScopedPointer<HDF5RecordingData> timestampDataSet;
+        
+        /** Holds the sample number for each sample (relative to the start of acquisition) */
 		ScopedPointer<HDF5RecordingData> sampleNumberDataSet;
+        
+        /** Holds the electrode index for each channel */
 		ScopedPointer<HDF5RecordingData> electrodeDataSet;
+        
+        /** Holds the TTL word for each sample (TTL event TimeSeries only) */
 		ScopedPointer<HDF5RecordingData> ttlWordDataSet;
+        
+        /** Holds the metadata for each event (if applicable) */
 		OwnedArray<HDF5RecordingData> metaDataSet;
+        
+        /** The path to this dataset within the NWB file */
 		String basePath;
+        
+        /** Total number of samples written */
 		uint64 numSamples{ 0 };
 	};
 
