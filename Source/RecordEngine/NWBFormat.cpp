@@ -351,7 +351,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 
 		if (info->getType() == EventChannel::TTL)
 		{
-			dSet = createDataSet(BaseDataType::U8, 0, info->getDataSize(), EVENT_CHUNK_SIZE, basePath + "/full_word");
+			dSet = createDataSet(BaseDataType::U64, 0, info->getDataSize(), EVENT_CHUNK_SIZE, basePath + "/full_word");
 			if (dSet == nullptr) return false;
 			tsStruct->ttlWordDataSet = dSet;
 		}
@@ -548,9 +548,8 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 
 	 if (event->getEventType() == EventChannel::TTL)
 	 {
-		uint8 controlValue = static_cast<const TTLEvent*>(event)->getLine() + 1;
-	 	//CHECK_ERROR(eventDataSets[eventID]->controlDataSet->writeDataBlock(1, BaseDataType::U8, &controlValue));
-		CHECK_ERROR(eventDataSets[eventID]->ttlWordDataSet->writeDataBlock(1, BaseDataType::U8, static_cast<const TTLEvent*>(event)->getRawDataPointer()));
+         uint64 ttlWord = static_cast<const TTLEvent*>(event)->getWord();
+		CHECK_ERROR(eventDataSets[eventID]->ttlWordDataSet->writeDataBlock(1, BaseDataType::U64, &ttlWord));
 	 }
 	 
 	 eventDataSets[eventID]->numSamples += 1;
