@@ -77,25 +77,41 @@ int NWBFile::createFileStructure()
 
 	if (createGroup("/specifications")) return -1;
     if (createGroup("specifications/core")) return -1;
+    
     if (createGroup("specifications/core/2.4.0")) return -1;
+    createTextDataSet("specifications/core/2.4.0", "namespace", "");
+    createTextDataSet("specifications/core/2.4.0", "nwb.base", "");
+    createTextDataSet("specifications/core/2.4.0", "nwb.behavior", "");
+    createTextDataSet("specifications/core/2.4.0", "nwb.device", "");
+    createTextDataSet("specifications/core/2.4.0", "nwb.ecephys", "");
+    createTextDataSet("specifications/core/2.4.0", "nwb.epoch", "");
+    createTextDataSet("specifications/core/2.4.0", "nwb.file", "");
+    createTextDataSet("specifications/core/2.4.0", "nwb.icephys", "");
+    createTextDataSet("specifications/core/2.4.0", "nwb.image", "");
+    createTextDataSet("specifications/core/2.4.0", "nwb.misc", "");
+    createTextDataSet("specifications/core/2.4.0", "nwb.ogen", "");
+    createTextDataSet("specifications/core/2.4.0", "nwb.ophys", "");
+    createTextDataSet("specifications/core/2.4.0", "nwb.retinotopy", "");
+
     if (createGroup("specifications/hdmf-common")) return -1;
     if (createGroup("specifications/hdmf-common/1.5.1")) return -1;
+    createTextDataSet("specifications/hdmf-common/1.5.0", "base", "");
+    createTextDataSet("specifications/hdmf-common/1.5.0", "namespace", "");
+    createTextDataSet("specifications/hdmf-common/1.5.0", "sparse", "");
+    createTextDataSet("specifications/hdmf-common/1.5.0", "table", "");
+    
     if (createGroup("specifications/hdmf-experimental")) return -1;
     if (createGroup("specifications/hdmf-experimental/0.2.0")) return -1;
+    createTextDataSet("specifications/hdmf-experimental/0.2.0", "experimental", "");
+    createTextDataSet("specifications/hdmf-experimental/0.2.0", "namespace", "");
+    createTextDataSet("specifications/hdmf-experimental/0.2.0", "resources", "");
     
 	if (createGroup("/stimulus")) return -1;
 	if (createGroup("/stimulus/presentation")) return -1;
 	if (createGroup("/stimulus/templates")) return -1;
 
 	createTextDataSet("", "timestamps_reference_time", time);
-
-	/*
-	CHECK_ERROR(setAttributeStr(String("Open Ephys GUI v") + GUIVersion, "/general/data_collection", "software"));
-	CHECK_ERROR(setAttributeStr(*xmlText, "/general/data_collection", "configuration"));
-	*/
-
 	createTextDataSet("", "identifier", identifierText);
-	//createTextDataSet("", "nwb_version", "NWB-1.0.6");
 	createTextDataSet("", "session_description", " ");
 	createTextDataSet("", "session_start_time", time);
 
@@ -141,7 +157,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 					+  "." + info->getStreamName();
         
         if (recordingNumber > 0)
-            desc += "_" + String(recordingNumber + 1);
+            desc += "." + String(recordingNumber + 1);
 
 		//std::cout << "Generated desc: " << desc << std::endl;
 	
@@ -150,7 +166,12 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 
 		tsStruct = new TimeSeries();
 		tsStruct->basePath = basePath;
-		dSet = createDataSet(BaseDataType::I16, 0, continuousArray.getReference(i).size(), CHUNK_XSIZE, basePath + "/data");
+		
+        dSet = createDataSet(BaseDataType::I16,
+                             0,
+                             continuousArray.getReference(i).size(),
+                             CHUNK_XSIZE,
+                             basePath + "/data");
 		
         if (dSet == nullptr)
 		{
@@ -198,7 +219,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		sourceName += "." + sourceInfo->getStreamName();
         
         if (recordingNumber > 0)
-            sourceName += "_" + String(recordingNumber + 1);
+            sourceName += "." + String(recordingNumber + 1);
         
 		basePath = rootPath + sourceName + ".spikes";
 
@@ -255,7 +276,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		sourceName += "." + info->getStreamName();
         
         if (recordingNumber > 0)
-            sourceName += "_" + String(recordingNumber + 1);
+            sourceName += "." + String(recordingNumber + 1);
 
 		String series;
 
@@ -280,7 +301,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 			//ancestry.add("AnnotationSeries");
 			basePath += "messages";
 			if (recordingNumber > 0)
-				basePath += "_" + String(recordingNumber + 1);
+				basePath += "." + String(recordingNumber + 1);
 			series = "AnnotationSeries";
 			helpText = "Time-stamped annotations about an experiment";
 			break;
@@ -340,7 +361,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 	basePath = rootPath + "sync_messages";
     
     if (recordingNumber > 0)
-        basePath += "_" + String(recordingNumber + 1);
+        basePath += "." + String(recordingNumber + 1);
 
 	//std::cout << "Sync messages: " << basePath << std::endl;
     
@@ -580,14 +601,14 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 
    HDF5RecordingData* NWBFile::createSampleNumberDataSet(String basePath, int chunk_size)
   {
-	  HDF5RecordingData* tsSet = createDataSet(BaseDataType::I64, 0, chunk_size, basePath + "/samples");
+	  HDF5RecordingData* tsSet = createDataSet(BaseDataType::I64, 0, chunk_size, basePath + "/sample_numbers");
 	  if (!tsSet)
 		  std::cerr << "Error creating sample number dataset in " << basePath << std::endl;
 	  else
 	  {
 		  const int32 one = 1;
-		  CHECK_ERROR(setAttribute(BaseDataType::I32, &one, basePath + "/samples", "interval"));
-		  CHECK_ERROR(setAttributeStr("samples", basePath + "/samples", "unit"));
+		  CHECK_ERROR(setAttribute(BaseDataType::I32, &one, basePath + "/sample_numbers", "interval"));
+		  CHECK_ERROR(setAttributeStr("samples", basePath + "/sample_numbers", "unit"));
 	  }
 	  return tsSet;
   }

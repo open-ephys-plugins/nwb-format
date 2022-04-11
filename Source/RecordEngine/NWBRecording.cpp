@@ -61,12 +61,8 @@
      continuousChannelGroups.clear();
 
 	 //Generate the continuous datasets info array, seeking for different combinations of recorded processor and source processor
-     Array<const ContinuousChannel*> firstChannels;
-     Array<int> channelCounts;
-     
      int streamIndex = -1;
-     int streamChannelCount = 0;
-	 
+
      for (int ch = 0; ch < getNumRecordedContinuousChannels(); ch++)
      {
 
@@ -80,21 +76,15 @@
 
          if (localIndex == 0)
          {
-             firstChannels.add(channelInfo);
              streamIndex++;
              
-             if (streamIndex > 0)
-             {
-                 channelCounts.add(streamChannelCount);
-             }
-                 
              ContinuousGroup newGroup;
-             newGroup.add(channelInfo);
              continuousChannelGroups.add(newGroup);
 
-             streamChannelCount = 0;
          }
          
+         continuousChannelGroups.getReference(streamIndex).add(channelInfo);
+
          datasetIndexes.set(ch, streamIndex);
          writeChannelIndexes.set(ch, localIndex);
 	 }
