@@ -42,13 +42,13 @@ public:
     NWBRecordEngine();
     
     /** Destructor */
-    ~NWBRecordEngine();
+    ~NWBRecordEngine() { }
     
     /** Launches the manager for this engine */
     static RecordEngineManager* getEngineManager();
 
     /** Returns a (hopefully unique) string identifier for this engine */
-    String getEngineId() const override;
+    String getEngineId() const override { return "NWB2"; }
     
     /** Called when recording starts to open all needed files */
     void openFiles(File rootFolder, int experimentNumber, int recordingNumber) override;
@@ -78,7 +78,7 @@ public:
     
     
 private:
-    ScopedPointer<NWBFile> recordFile;
+    ScopedPointer<NWBFile> nwb;
     Array<int> datasetIndexes;
     Array<int> writeChannelIndexes;
 

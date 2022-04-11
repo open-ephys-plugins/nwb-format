@@ -39,15 +39,18 @@
 
  #define MAX_BUFFER_SIZE 40960
 
- NWBFile::NWBFile(String fName, String ver, String idText) : HDF5FileBase(), filename(fName), identifierText(idText), GUIVersion(ver)
- {
-	 //Init stuff
-	 readyToOpen=true; //In KWIK this is in initFile, but the new recordEngine methods make it safe for it to be here
+NWBFile::NWBFile(String fName, String ver, String idText) :
+    HDF5FileBase(),
+    filename(fName),
+    identifierText(idText),
+    GUIVersion(ver)
+{
+	 readyToOpen = true; //In KWIK this is in initFile, but the new recordEngine methods make it safe for it to be here
 
 	 scaledBuffer.malloc(MAX_BUFFER_SIZE);
 	 intBuffer.malloc(MAX_BUFFER_SIZE);
 	 bufferSize = MAX_BUFFER_SIZE;
- }
+}
  
 int NWBFile::createFileStructure()
 {
