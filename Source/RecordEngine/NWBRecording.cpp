@@ -26,9 +26,25 @@
  
  using namespace NWBRecording;
  
- NWBRecordEngine::NWBRecordEngine() 
+ NWBRecordEngine::NWBRecordEngine()
  {
 	 smpBuffer.malloc(MAX_BUFFER_SIZE);
+ }
+
+
+ NWBRecordEngine::~NWBRecordEngine()
+ {
+     if (nwb != nullptr)
+     {
+         spikeChannels.clear();
+         eventChannels.clear();
+         continuousChannelGroups.clear();
+         datasetIndexes.clear();
+         writeChannelIndexes.clear();
+
+         nwb->close();
+         nwb.reset();
+     }
  }
 
 RecordEngineManager* NWBRecordEngine::getEngineManager()
@@ -44,72 +60,86 @@ RecordEngineManager* NWBRecordEngine::getEngineManager()
  
  void NWBRecordEngine::openFiles(File rootFolder, int experimentNumber, int recordingNumber)
  {
-    
-     // New file for each experiment, e.g. experiment1.nwb, epxperiment2.nwb, etc.
-	 String basepath = rootFolder.getFullPathName() +
-                       rootFolder.getSeparatorString() +
-                       "experiment" + String(experimentNumber) +
-                       ".nwb";
-     
-     if (!File(basepath).exists())
+
+     if (recordingNumber == 0) // new file needed
      {
+
+         spikeChannels.clear();
+         eventChannels.clear();
+         continuousChannelGroups.clear();
+         datasetIndexes.clear();
+         writeChannelIndexes.clear();
+
+         // New file for each experiment, e.g. experiment1.nwb, epxperiment2.nwb, etc.
+         String basepath = rootFolder.getFullPathName() +
+             rootFolder.getSeparatorString() +
+             "experiment" + String(experimentNumber) +
+             ".nwb";
+         
+         if (nwb != nullptr)
+         {
+             nwb->close();
+             nwb.reset();
+         }
+
          // create a unique identifier for the file if it doesn't exist
          Uuid identifier;
          identifierText = identifier.toString();
-     }
-     
-	 nwb = new NWBFile(basepath, CoreServices::getGUIVersion(), identifierText);
 
-	 datasetIndexes.insertMultiple(0, 0, getNumRecordedContinuousChannels());
-	 writeChannelIndexes.insertMultiple(0, 0, getNumRecordedContinuousChannels());
-     continuousChannelGroups.clear();
+         nwb = std::make_unique<NWBFile>(basepath, CoreServices::getGUIVersion(), identifierText);
 
-     int streamIndex = -1;
-     uint16 lastStreamId = 0;
-     int indexWithinStream = 0;
+         datasetIndexes.insertMultiple(0, 0, getNumRecordedContinuousChannels());
+         writeChannelIndexes.insertMultiple(0, 0, getNumRecordedContinuousChannels());
+         continuousChannelGroups.clear();
 
-     for (int ch = 0; ch < getNumRecordedContinuousChannels(); ch++)
-     {
+         int streamIndex = -1;
+         uint16 lastStreamId = 0;
+         int indexWithinStream = 0;
 
-         int globalIndex = getGlobalIndex(ch); // the global channel index (across all channels entering the Record Node)
-         int localIndex = getLocalIndex(ch);   // the local channel index (within a stream)
-         
-         const ContinuousChannel* channelInfo = getContinuousChannel(globalIndex); // channel info object
-		 
-         int sourceId = channelInfo->getSourceNodeId();
-         int streamId = channelInfo->getStreamId();
-
-         if (streamId != lastStreamId)
+         for (int ch = 0; ch < getNumRecordedContinuousChannels(); ch++)
          {
-             streamIndex++;
-             indexWithinStream = 0;
-             
-             ContinuousGroup newGroup;
-             continuousChannelGroups.add(newGroup);
-             
+
+             int globalIndex = getGlobalIndex(ch); // the global channel index (across all channels entering the Record Node)
+             int localIndex = getLocalIndex(ch);   // the local channel index (within a stream)
+
+             const ContinuousChannel* channelInfo = getContinuousChannel(globalIndex); // channel info object
+
+             int sourceId = channelInfo->getSourceNodeId();
+             int streamId = channelInfo->getStreamId();
+
+             if (streamId != lastStreamId)
+             {
+                 streamIndex++;
+                 indexWithinStream = 0;
+
+                 ContinuousGroup newGroup;
+                 continuousChannelGroups.add(newGroup);
+
+             }
+
+             continuousChannelGroups.getReference(streamIndex).add(channelInfo);
+
+             datasetIndexes.set(ch, streamIndex);
+             writeChannelIndexes.set(ch, indexWithinStream++);
+
+             lastStreamId = streamId;
          }
-         
-         continuousChannelGroups.getReference(streamIndex).add(channelInfo);
 
-         datasetIndexes.set(ch, streamIndex);
-         writeChannelIndexes.set(ch, indexWithinStream++);
-         
-         lastStreamId = streamId;
-	 }
-     
-	 int nEvents = getNumRecordedEventChannels();
-	 for (int i = 0; i < nEvents; i++)
-		 eventChannels.add(getEventChannel(i));
+         int nEvents = getNumRecordedEventChannels();
+         for (int i = 0; i < nEvents; i++)
+             eventChannels.add(getEventChannel(i));
 
-	 int nSpikes = getNumRecordedSpikeChannels();
-	 for (int i = 0; i < nSpikes; i++)
-		 spikeChannels.add(getSpikeChannel(i));
+         int nSpikes = getNumRecordedSpikeChannels();
+         for (int i = 0; i < nSpikes; i++)
+             spikeChannels.add(getSpikeChannel(i));
 
-	 //open the file
-	 nwb->open(getNumRecordedContinuousChannels() + continuousChannelGroups.size() + eventChannels.size() + spikeChannels.size()); //total channels + timestamp arrays, to create a big enough buffer
+         //open the file
+         nwb->open(getNumRecordedContinuousChannels() + continuousChannelGroups.size() + eventChannels.size() + spikeChannels.size()); //total channels + timestamp arrays, to create a big enough buffer
 
-	 //create the recording
-	 nwb->startNewRecording(recordingNumber, continuousChannelGroups, eventChannels, spikeChannels);
+         //create the recording
+         nwb->startNewRecording(recordingNumber, continuousChannelGroups, eventChannels, spikeChannels);
+     }
+	 
 	
  }
 
@@ -118,13 +148,7 @@ RecordEngineManager* NWBRecordEngine::getEngineManager()
  {
 	 //Called when acquisition stops. Should close the files and leave the processor in a reset status
 	 nwb->stopRecording();
-	 nwb->close();
-	 nwb = nullptr;
-     spikeChannels.clear();
-     eventChannels.clear();
-     continuousChannelGroups.clear();
-     datasetIndexes.clear();
-     writeChannelIndexes.clear();
+
  }
 
  
@@ -135,12 +159,19 @@ void NWBRecordEngine::writeContinuousData(int writeChannel,
                                           const double* timestampBuffer,
                                           int size)
 {
-    nwb->writeData(datasetIndexes[writeChannel], writeChannelIndexes[writeChannel], size, dataBuffer, getContinuousChannel(realChannel)->getBitVolts());
+    nwb->writeData(datasetIndexes[writeChannel], 
+        writeChannelIndexes[writeChannel],
+        size, 
+        dataBuffer, 
+        getContinuousChannel(realChannel)->getBitVolts());
 
-    /* All channels in a dataset have the same number of samples and share timestamps. But since this method is called asynchronously, the timestamps might not be in sync during acquisition, so we chose a channel and write the timestamps when writing that channel's data */
+    /* All channels in a dataset have the same number of samples and share timestamps. 
+       But since this method is called asynchronously, the timestamps might not be 
+       in sync during acquisition, so we chose a channel and write the timestamps 
+       when writing that channel's data */
     if (writeChannelIndexes[writeChannel] == 0)
     {
-        int64 baseTS = getTimestamp(writeChannel);
+        int64 baseTS = getLatestSampleNumber(writeChannel);
         
         for (int i = 0; i < size; i++)
         {

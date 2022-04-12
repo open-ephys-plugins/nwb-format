@@ -80,7 +80,7 @@ namespace NWBRecording
 		NWBFile(String fName, String ver, String identifier);
         
         /** Destructor */
-        ~NWBFile() { }
+        ~NWBFile();
         
         /** Creates the groups required for a new recording, given an array of continuous channels, event channels, and spike channels*/
 		bool startNewRecording(int recordingNumber,
@@ -170,7 +170,7 @@ namespace NWBRecording
 		OwnedArray<TimeSeries>  continuousDataSets;
 		OwnedArray<TimeSeries> spikeDataSets;
 		OwnedArray<TimeSeries> eventDataSets;
-		ScopedPointer<TimeSeries> syncMsgDataSet;
+		std::unique_ptr<TimeSeries> syncMsgDataSet;
 
 		const String identifierText;
 

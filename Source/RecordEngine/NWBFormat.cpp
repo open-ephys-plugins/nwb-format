@@ -51,6 +51,14 @@ NWBFile::NWBFile(String fName, String ver, String idText) :
 	 intBuffer.malloc(MAX_BUFFER_SIZE);
 	 bufferSize = MAX_BUFFER_SIZE;
 }
+
+NWBFile::~NWBFile()
+{
+	continuousDataSets.clear();
+	spikeDataSets.clear();
+	eventDataSets.clear();
+	syncMsgDataSet.reset();
+}
  
 int NWBFile::createFileStructure()
 {
@@ -124,8 +132,11 @@ int NWBFile::createFileStructure()
 
 }
  
-bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup>& continuousArray,
-	const Array<const EventChannel*>& eventArray, const Array<const SpikeChannel*>& electrodeArray)
+bool NWBFile::startNewRecording(
+	int recordingNumber, 
+	const Array<ContinuousGroup>& continuousArray,
+	const Array<const EventChannel*>& eventArray, 
+	const Array<const SpikeChannel*>& electrodeArray)
 {
 
     // all recorded data is stored in the "acquisition" group
@@ -170,9 +181,9 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
         timeSeries = new TimeSeries();
         timeSeries->basePath = basePath;
 		
-        dSet = getDataSet(basePath + "/data");
+		std::cout << basePath << "/data" << std::endl;
         
-        if (dSet == nullptr)
+        if (recordingNumber == 0)
         {
             dSet = createDataSet(BaseDataType::I16,
                                  0,
@@ -189,40 +200,53 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
             {
                 createDataAttributes(basePath, info->getBitVolts(), info->getBitVolts() / 65536, info->getUnits());
             }
-        }
+		}
+		else {
+			dSet = getDataSet(basePath + "/data");
+		}
         
+		
         timeSeries->baseDataSet = dSet;
 
-        dSet = getDataSet(basePath + "/timestamps");
+		std::cout << basePath << "/timestamps" << std::endl;
         
-        if (dSet == nullptr)
+        if (recordingNumber == 0)
         {
             dSet = createTimestampDataSet(basePath + "/timestamps", CHUNK_XSIZE);
             if (dSet == nullptr) return false;
-        }
+		}
+		else {
+			dSet = getDataSet(basePath + "/timestamps");
+		}
         
         timeSeries->timestampDataSet = dSet;
         
-        dSet = getDataSet(basePath + "/sample_numbers");
-        
-        if (dSet == nullptr)
+		std::cout << basePath << "/sample_numbers" << std::endl;
+       
+        if (recordingNumber == 0)
         {
             dSet = createSampleNumberDataSet(basePath + "/sample_numbers", CHUNK_XSIZE);
             if (dSet == nullptr) return false;
-        }
+		}
+		else {
+			dSet = getDataSet(basePath + "/sample_numbers");
+		}
 
         timeSeries->sampleNumberDataSet = dSet;
         
-        dSet = getDataSet(basePath + "/electrodes");
-        
+		std::cout << basePath << "/electrodes" << std::endl;
+       
         int numElectrodesInStream = continuousArray.getReference(i).size();
         
-        if (dSet == nullptr)
+        if (recordingNumber == 0)
         {
             dSet = createElectrodeDataSet(basePath + "/electrodes", desc, CHUNK_XSIZE);
             if (dSet == nullptr) return false;
             writeElectrodes(i, totalElectrodeCount, numElectrodesInStream);
-        }
+		}
+		else {
+			dSet = getDataSet(basePath + "/electrodes");
+		}
         
         totalElectrodeCount += numElectrodesInStream;
 		
@@ -265,9 +289,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		timeSeries = new TimeSeries();
         timeSeries->basePath = basePath;
         
-        dSet = getDataSet(basePath + "/data");
-        
-        if (dSet == nullptr)
+        if (recordingNumber == 0)
         {
             dSet = createDataSet(BaseDataType::I16, 0, sourceInfo->getNumChannels(), sourceInfo->getTotalSamples(), SPIKE_CHUNK_XSIZE, basePath + "/data");
             if (dSet == nullptr)
@@ -279,18 +301,23 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
             {
                 createDataAttributes(basePath, sourceInfo->getChannelBitVolts(0), sourceInfo->getChannelBitVolts(0) / 65536, "volt");
             }
-        }
+		}
+		else {
+			dSet = getDataSet(basePath + "/data");
+		}
 
         timeSeries->baseDataSet = dSet;
+       
         
-        dSet = getDataSet(basePath + "/timestamps");
-        
-        if (dSet == nullptr)
+        if (recordingNumber == 0)
         {
-            dSet = createTimestampDataSet(basePath, SPIKE_CHUNK_XSIZE);
+            dSet = createTimestampDataSet(basePath + "/timestamps", SPIKE_CHUNK_XSIZE);
             if (dSet == nullptr) return false;
             
-        }
+		}
+		else {
+			dSet = getDataSet(basePath + "/timestamps");
+		}
         
         timeSeries->timestampDataSet = dSet;
     
@@ -298,7 +325,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 
 	}
 
-	//std::cout << "Created spike channels " << std::endl;
+	std::cout << "Created spike channels " << std::endl;
 	
 	int nEvents = eventArray.size();
 	int nTTL = 0;
@@ -350,9 +377,7 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 		timeSeries = new TimeSeries();
         timeSeries->basePath = basePath;
         
-        dSet = getDataSet(basePath + "/data");
-        
-        if (dSet == nullptr)
+        if (recordingNumber == 0)
         {
             if (info->getType() >= EventChannel::BinaryDataType::BINARY_BASE_VALUE) //only binary events have length greater than 1
             {
@@ -372,30 +397,35 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
             {
                 createDataAttributes(basePath, NAN, NAN, "n/a");
             }
-        }
+		}
+		else {
+			dSet = getDataSet(basePath + "/data");
+		}
 
         timeSeries->baseDataSet = dSet;
         
-        dSet = getDataSet(basePath + "/timestamps");
-        
-        if (dSet == nullptr)
+        if (recordingNumber == 0)
         {
-            dSet = createTimestampDataSet(basePath, EVENT_CHUNK_SIZE);
+            dSet = createTimestampDataSet(basePath + "/timestamps", EVENT_CHUNK_SIZE);
             if (dSet == nullptr) return false;
-        }
+		}
+		else {
+			dSet = getDataSet(basePath + "/timestamps");
+		}
         
         timeSeries->timestampDataSet = dSet;
 
 		if (info->getType() == EventChannel::TTL)
 		{
             
-            dSet = getDataSet(basePath + "/full_word");
-            
-            if (dSet == nullptr)
+            if (recordingNumber == 0)
             {
                 dSet = createDataSet(BaseDataType::U64, 0, info->getDataSize(), EVENT_CHUNK_SIZE, basePath + "/full_word");
                 if (dSet == nullptr) return false;
-            }
+			}
+			else {
+				dSet = getDataSet(basePath + "/full_word");
+			}
 			
             timeSeries->ttlWordDataSet = dSet;
 		}
@@ -404,26 +434,27 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
 
 	}
 
-	//std::cout << "Created event channels " << std::endl;
+	std::cout << "Created event channels " << std::endl;
 	
 	basePath = rootPath + "sync_messages";
     
     //if (recordingNumber > 0)
      //   basePath += "." + String(recordingNumber + 1);
 
-	//std::cout << "Sync messages: " << basePath << std::endl;
+	std::cout << "Sync messages: " << basePath << std::endl;
 	String desc = "Stores recording start timestamps for each processor in text format";
 	
-    if (!createTimeSeriesBase(basePath, "Auto-generated messages at the start of each recording", "AnnotationSeries")) return false;
-	
-    timeSeries = new TimeSeries();
-    timeSeries->basePath = basePath;
-	
-    dSet = getDataSet(basePath + "/data");
-    
-    if (dSet == nullptr)
+    syncMsgDataSet = std::make_unique<TimeSeries>();
+	syncMsgDataSet->basePath = basePath;
+
+    if (recordingNumber == 0)
     {
+
+		if (!createTimeSeriesBase(basePath, "Auto-generated messages at the start of each recording", "AnnotationSeries")) return false;
+
         dSet = createDataSet(BaseDataType::STR(100), 0, 1, basePath + "/data");
+
+		std::cout << "Created new sync messages dataset " << std::endl;
         
         if (dSet == nullptr)
         {
@@ -434,21 +465,28 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
         {
             createDataAttributes(basePath, NAN, NAN, "n/a");
         }
-    }
+	}
+	else {
+		dSet = getDataSet(basePath + "/data");
+	}
    
-	timeSeries->baseDataSet = dSet;
-    
-    dSet = getDataSet(basePath + "/timestamps");
-    
-    if (dSet == nullptr)
-    {
-        dSet = createTimestampDataSet(basePath, 1);
-        if (dSet == nullptr) return false;
-    }
-    
-    timeSeries->timestampDataSet = dSet;
+	syncMsgDataSet->baseDataSet = dSet;
 
-	syncMsgDataSet = timeSeries;
+    if (recordingNumber == 0)
+    {
+
+		std::cout << "Created new sync messages timestamps dataset " << std::endl;
+
+        dSet = createTimestampDataSet(basePath + "/timestamps", 1);
+        if (dSet == nullptr) return false;
+	}
+	else {
+		dSet = getDataSet(basePath + "/timestamps");
+	}
+    
+	syncMsgDataSet->timestampDataSet = dSet;
+
+	std::cout << "MADE IT TO THE END!" << std::endl;
 
 	return true;
 
@@ -456,32 +494,28 @@ bool NWBFile::startNewRecording(int recordingNumber, const Array<ContinuousGroup
  
  void NWBFile::stopRecording()
  {
-	 int nObjs = continuousDataSets.size();
+
 	 const TimeSeries* tsStruct;
-	 for (int i = 0; i < nObjs; i++)
+
+	 for (int i = 0; i < continuousDataSets.size(); i++)
 	 {
 		 tsStruct = continuousDataSets[i];
 		 CHECK_ERROR(setAttribute(BaseDataType::U64, &(tsStruct->numSamples), tsStruct->basePath, "num_samples"));
 	 }
-	 nObjs = spikeDataSets.size();
-	 for (int i = 0; i < nObjs; i++)
+
+	 for (int i = 0; i < spikeDataSets.size(); i++)
 	 {
 		 tsStruct = spikeDataSets[i];
 		 CHECK_ERROR(setAttribute(BaseDataType::U64, &(tsStruct->numSamples), tsStruct->basePath, "num_samples"));
 	 }
-	 nObjs = eventDataSets.size();
-	 for (int i = 0; i < nObjs; i++)
+	 
+	 for (int i = 0; i < eventDataSets.size(); i++)
 	 {
 		 tsStruct = eventDataSets[i];
 		 CHECK_ERROR(setAttribute(BaseDataType::U64, &(tsStruct->numSamples), tsStruct->basePath, "num_samples"));
 	 }
 	 
-	 //CHECK_ERROR(setAttribute(BaseDataType::U64, &(syncMsgDataSet->numSamples), syncMsgDataSet->basePath, "num_samples"));
-
-	 continuousDataSets.clear();
-	 spikeDataSets.clear();
-	 eventDataSets.clear();
-	 syncMsgDataSet = nullptr;
+	 CHECK_ERROR(setAttribute(BaseDataType::U64, &(syncMsgDataSet->numSamples), syncMsgDataSet->basePath, "num_samples"));
  }
  
  void NWBFile::writeData(int datasetID, int channel, int nSamples, const float* data, float bitVolts)

@@ -42,7 +42,7 @@ public:
     NWBRecordEngine();
     
     /** Destructor */
-    ~NWBRecordEngine() { }
+    ~NWBRecordEngine();
     
     /** Launches the manager for this engine */
     static RecordEngineManager* getEngineManager();
@@ -78,7 +78,7 @@ public:
 private:
     
     /** Pointer to the current NWB file */
-    ScopedPointer<NWBFile> nwb;
+    std::unique_ptr<NWBFile> nwb;
     
     /** For each incoming recorded channel, which dataset (stream) is it associated with? */
     Array<int> datasetIndexes;
@@ -100,7 +100,7 @@ private:
 
     /** The identifier for the current file (can be set externally) */
     String identifierText;
-    
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(NWBRecordEngine);
 
     
