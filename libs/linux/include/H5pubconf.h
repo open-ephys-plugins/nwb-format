@@ -310,7 +310,7 @@
 #define H5_HAVE_PTHREAD_H 1
 
 /* Define to 1 if you have the <quadmath.h> header file. */
-/* #undef H5_HAVE_QUADMATH_H */
+#define H5_HAVE_QUADMATH_H 1
 
 /* Define to 1 if you have the `random' function. */
 #define H5_HAVE_RANDOM 1
@@ -545,7 +545,7 @@
 #define H5_PACKAGE_VERSION "1.12.1"
 
 /* Determine the maximum decimal precision in C */
-#define H5_PAC_C_MAX_REAL_PRECISION 0
+#define H5_PAC_C_MAX_REAL_PRECISION 33
 
 /* Define Fortran Maximum Real Decimal Precision */
 #define H5_PAC_FC_MAX_REAL_PRECISION 
