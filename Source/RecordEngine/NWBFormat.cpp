@@ -78,28 +78,17 @@ int NWBFile::createFileStructure()
 
 	if (createGroup("/general")) return -1;
 	if (createGroup("general/devices")) return -1;
-	createTextDataSet("general", "experiment_description", " ");
-	createTextDataSet("general", "experimenter", " ");
 	if (createGroup("general/extracellular_ephys")) return -1;
-	createTextDataSet("general", "institution", " ");
-	createTextDataSet("general", "session_id", " ");
-	createTextDataSet("", "identifier", identifierText);
-
 	if (createGroup("/processing")) return -1;
 
-	createTextDataSet("", "session_description", " ");
-
-	createTextDataSet("", "session_start_time", time);
-    
 	if (createGroup("/stimulus")) return -1;
 	if (createGroup("/stimulus/presentation")) return -1;
 	if (createGroup("/stimulus/templates")) return -1;
 
-	createTextDataSet("", "timestamps_reference_time", time);
-	createTextDataSet("", "session_description", " ");
-	createTextDataSet("", "session_start_time", time);
-
-	createTextDataSet("", "timestamps_reference_time", time);
+	createStringDataSet("/session_description", "Recording with the Open Ephys GUI");
+	createStringDataSet("/session_start_time", time);
+	createStringDataSet("/timestamps_reference_time", time);
+	createStringDataSet("/identifier", "test-identifier");
 
 	return 0;
 
