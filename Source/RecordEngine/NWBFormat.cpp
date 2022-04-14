@@ -390,6 +390,17 @@ bool NWBFile::startNewRecording(
     
 	syncMsgDataSet->sampleNumberDataSet = dSet;
 
+	if (recordingNumber == 0)
+	{
+		dSet = createTimestampDataSet(basePath + "/timestamps", 1);
+		if (dSet == nullptr) return false;
+	}
+	else {
+		dSet = getDataSet(basePath + "/timestamps");
+	}
+
+	syncMsgDataSet->timestampDataSet = dSet;
+
 	return true;
 
  }
@@ -557,6 +568,11 @@ bool NWBFile::startNewRecording(
 	 CHECK_ERROR(syncMsgDataSet->baseDataSet->writeDataBlock(1, BaseDataType::STR(text.length()), text.toUTF8()));
      
 	 CHECK_ERROR(syncMsgDataSet->sampleNumberDataSet->writeDataBlock(1, BaseDataType::I64, &sampleNumber));
+
+	 double timestamp = (double)sampleNumber;
+
+	 CHECK_ERROR(syncMsgDataSet->timestampDataSet->writeDataBlock(1, BaseDataType::F64, &timestamp));
+
 	 syncMsgDataSet->numSamples += 1;
  }
 
