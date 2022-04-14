@@ -46,7 +46,7 @@ else()
 	add_library(${PLUGIN_NAME} SHARED ${SRC_FILES})
 endif()
 
-target_compile_features(${PLUGIN_NAME} PUBLIC cxx_auto_type cxx_generalized_initializers)
+target_compile_features(${PLUGIN_NAME} PUBLIC cxx_auto_type cxx_generalized_initializers cxx_std_17)
 target_include_directories(${PLUGIN_NAME} PUBLIC ${GUI_BASE_DIR}/JuceLibraryCode ${GUI_BASE_DIR}/JuceLibraryCode/modules ${GUI_BASE_DIR}/Plugins/Headers ${GUI_COMMONLIB_DIR}/include)
 
 set(GUI_BIN_DIR ${GUI_BASE_DIR}/Build/${CONFIGURATION_FOLDER})
@@ -64,7 +64,7 @@ if(MSVC)
 	add_compile_definitions(H5_BUILT_AS_DYNAMIC_LIB=1)
 	target_link_libraries(${PLUGIN_NAME} ${GUI_BIN_DIR}/open-ephys.lib)
 	target_compile_options(${PLUGIN_NAME} PRIVATE /sdl- /W0)
-	
+
 	install(TARGETS ${PLUGIN_NAME} RUNTIME DESTINATION ${GUI_BIN_DIR}/plugins  CONFIGURATIONS ${CMAKE_CONFIGURATION_TYPES})
 
 	set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/libs/windows)
@@ -74,7 +74,7 @@ elseif(LINUX)
 		"-fvisibility=hidden -fPIC -rdynamic -Wl,-rpath='$ORIGIN/../shared' -Wl,-rpath='$ORIGIN/../shared-api8'")
 	target_compile_options(${PLUGIN_NAME} PRIVATE -fPIC -rdynamic)
 	target_compile_options(${PLUGIN_NAME} PRIVATE -O0) #enable optimization for linux debug
-	
+
 	install(TARGETS ${PLUGIN_NAME} LIBRARY DESTINATION ${GUI_BIN_DIR}/plugins)
 	set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/libs/linux)
 elseif(APPLE)
