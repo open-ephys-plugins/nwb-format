@@ -63,6 +63,11 @@ NWBFile::~NWBFile()
 int NWBFile::createFileStructure()
 {
 
+	setAttributeStr("core", "/", "namespace");
+	setAttributeStr("NWBFile", "/", "neurodata_type");
+	setAttributeStr("2.4.0", "/", "nwb_version");
+	setAttributeStr(identifierText, "/", "object_id");
+
 	if (createGroup("/acquisition")) return -1;
 
 	if (createGroup("/analysis")) return -1;
@@ -85,44 +90,12 @@ int NWBFile::createFileStructure()
 	createTextDataSet("", "session_description", " ");
 
 	createTextDataSet("", "session_start_time", time);
-
-	if (createGroup("/specifications")) return -1;
-    if (createGroup("specifications/core")) return -1;
-    
-    if (createGroup("specifications/core/2.4.0")) return -1;
-    createTextDataSet("specifications/core/2.4.0", "namespace", "");
-    createTextDataSet("specifications/core/2.4.0", "nwb.base", "");
-    createTextDataSet("specifications/core/2.4.0", "nwb.behavior", "");
-    createTextDataSet("specifications/core/2.4.0", "nwb.device", "");
-    createTextDataSet("specifications/core/2.4.0", "nwb.ecephys", "");
-    createTextDataSet("specifications/core/2.4.0", "nwb.epoch", "");
-    createTextDataSet("specifications/core/2.4.0", "nwb.file", "");
-    createTextDataSet("specifications/core/2.4.0", "nwb.icephys", "");
-    createTextDataSet("specifications/core/2.4.0", "nwb.image", "");
-    createTextDataSet("specifications/core/2.4.0", "nwb.misc", "");
-    createTextDataSet("specifications/core/2.4.0", "nwb.ogen", "");
-    createTextDataSet("specifications/core/2.4.0", "nwb.ophys", "");
-    createTextDataSet("specifications/core/2.4.0", "nwb.retinotopy", "");
-
-    if (createGroup("specifications/hdmf-common")) return -1;
-    if (createGroup("specifications/hdmf-common/1.5.1")) return -1;
-    createTextDataSet("specifications/hdmf-common/1.5.0", "base", "");
-    createTextDataSet("specifications/hdmf-common/1.5.0", "namespace", "");
-    createTextDataSet("specifications/hdmf-common/1.5.0", "sparse", "");
-    createTextDataSet("specifications/hdmf-common/1.5.0", "table", "");
-    
-    if (createGroup("specifications/hdmf-experimental")) return -1;
-    if (createGroup("specifications/hdmf-experimental/0.2.0")) return -1;
-    createTextDataSet("specifications/hdmf-experimental/0.2.0", "experimental", "");
-    createTextDataSet("specifications/hdmf-experimental/0.2.0", "namespace", "");
-    createTextDataSet("specifications/hdmf-experimental/0.2.0", "resources", "");
     
 	if (createGroup("/stimulus")) return -1;
 	if (createGroup("/stimulus/presentation")) return -1;
 	if (createGroup("/stimulus/templates")) return -1;
 
 	createTextDataSet("", "timestamps_reference_time", time);
-	createTextDataSet("", "identifier", identifierText);
 	createTextDataSet("", "session_description", " ");
 	createTextDataSet("", "session_start_time", time);
 
