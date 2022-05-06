@@ -210,8 +210,6 @@ bool NWBFile::startNewRecording(
 
 		basePath += "/" + sourceInfo->getName();
         
-        createGroupIfDoesNotExist(basePath);
-
         if (!createTimeSeriesBase(basePath, "Stores acquired spike data from extracellular recordings", "")) return false;
 
 		timeSeries = new TimeSeries();
