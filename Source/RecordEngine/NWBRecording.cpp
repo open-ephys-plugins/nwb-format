@@ -125,12 +125,10 @@ RecordEngineManager* NWBRecordEngine::getEngineManager()
              lastStreamId = streamId;
          }
 
-         int nEvents = getNumRecordedEventChannels();
-         for (int i = 0; i < nEvents; i++)
+         for (int i = 0; i < getNumRecordedEventChannels(); i++)
              eventChannels.add(getEventChannel(i));
 
-         int nSpikes = getNumRecordedSpikeChannels();
-         for (int i = 0; i < nSpikes; i++)
+         for (int i = 0; i < getNumRecordedSpikeChannels(); i++)
              spikeChannels.add(getSpikeChannel(i));
 
          //open the file
@@ -139,16 +137,12 @@ RecordEngineManager* NWBRecordEngine::getEngineManager()
          //create the recording
          nwb->startNewRecording(recordingNumber, continuousChannelGroups, eventChannels, spikeChannels);
      }
-	 
-	
  }
 
  
  void NWBRecordEngine::closeFiles()
  {
-	 //Called when acquisition stops. Should close the files and leave the processor in a reset status
 	 nwb->stopRecording();
-
  }
 
  

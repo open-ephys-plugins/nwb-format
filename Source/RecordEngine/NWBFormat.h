@@ -36,11 +36,14 @@ namespace NWBRecording
     typedef Array<const ContinuousChannel*> ContinuousGroup;
 
     /**
-        Represents an NWB TimeSeries dataset
+        Represents a generic NWB TimeSeries dataset
      */
 	class TimeSeries
 	{
 	public:
+        
+        /** Constructor */
+        TimeSeries(String rootPath, String name, String description);
         
         /** Holds the sample data */
 		ScopedPointer<HDF5RecordingData> baseDataSet;
@@ -51,21 +54,94 @@ namespace NWBRecording
         /** Holds the sample number for each sample (relative to the start of acquisition) */
 		ScopedPointer<HDF5RecordingData> sampleNumberDataSet;
         
-        /** Holds the electrode index for each channel */
-		ScopedPointer<HDF5RecordingData> electrodeDataSet;
-        
-        /** Holds the TTL word for each sample (TTL event TimeSeries only) */
-		ScopedPointer<HDF5RecordingData> ttlWordDataSet;
-        
-        /** Holds the metadata for each event (if applicable) */
-		OwnedArray<HDF5RecordingData> metaDataSet;
+        /** Holds metadata for this time series */
+        OwnedArray<HDF5RecordingData> metaDataSet;
         
         /** The path to this dataset within the NWB file */
 		String basePath;
         
+        /** The description of this dataset*/
+        String description;
+        
         /** Total number of samples written */
-		uint64 numSamples{ 0 };
+        uint64 numSamples = 0;
+        
+        /** Get neurodata_type */
+        virtual String getNeurodataType() { return "TimeSeries";}
+    
 	};
+
+    namespace ecephys {
+    /**
+        Represents an NWB ElectricalSeries dataset
+     */
+    class ElectricalSeries : public TimeSeries
+    {
+    public:
+        /** Constructor */
+        ElectricalSeries(String rootPath, String name, String description,
+                         int channel_count, Array<float> channel_conversion);
+        
+        /** Holds the sample number for each sample (relative to the start of acquisition) */
+        ScopedPointer<HDF5RecordingData> channelConversionDataSet;
+        
+        /** Holds the DynamicTableRegion index of each electrode  */
+        ScopedPointer<HDF5RecordingData> electrodeDataSet;
+        
+        /** Channel conversion values */
+        Array<float> channel_conversion;
+        
+        /** Number of channels to write */
+        int channel_count;
+        
+        /** Get neurodata_type */
+        virtual String getNeurodataType() override { return "ElectricalSeries";}
+    };
+
+    /**
+        Represents a sequence of spike events
+     */
+    class SpikeEventSeries : public ElectricalSeries
+    {
+        
+    public:
+        /** Constructor */
+        SpikeEventSeries(String rootPath, String name, String description,
+                         int channel_count, Array<float> channel_conversion);
+        
+        /** Get neurodata_type */
+        virtual String getNeurodataType() override { return "SpikeEventSeries";}
+    };
+    }
+
+    /**
+        Represents a TTL event series (not a core NWB data type)
+     */
+    class TTLEventSeries : public TimeSeries
+    {
+    public:
+        /** Constructor */
+        TTLEventSeries(String rootPath, String name, String description);
+        
+        /** Holds the TTL word for each sample */
+        ScopedPointer<HDF5RecordingData> ttlWordDataSet;
+        
+        /** Get neurodata_type */
+        virtual String getNeurodataType() override { return "TimeSeries";}
+    };
+
+    /**
+        Represents a sequence of string annotations
+     */
+    class AnnotationSeries : public TimeSeries
+    {
+    public:
+        /** Constructor */
+        AnnotationSeries(String rootPath, String name, String description);
+        
+        /** Get neurodata_type */
+        virtual String getNeurodataType() override { return "AnnotationSeries";}
+    };
 
     /**
         
@@ -101,7 +177,10 @@ namespace NWBRecording
 		void writeSampleNumbers(int datasetID, int nSamples, const int64* data);
         
         /** Writes electrode numbers for a continuous dataset */
-		void writeElectrodes(int datasetID, int start, int nElectrodes);
+		void writeElectrodes(ecephys::ElectricalSeries* electricalSeries, Array<int> electrodeInds);
+        
+        /** Writes channel conversion values */
+        void writeChannelConversions(ecephys::ElectricalSeries* series);
         
         /** Writes a spike event*/
 		void writeSpike(int electrodeId, const SpikeChannel* channel, const Spike* event);
@@ -117,6 +196,9 @@ namespace NWBRecording
         
         /** Returns the name of this NWB file */
 		String getFileName() override;
+        
+        /** Generate a new uuid string*/
+        String generateUuid();
 
 	protected:
         
@@ -138,7 +220,7 @@ namespace NWBRecording
         static HDF5FileBase::BaseDataType getMetadataH5Type(MetadataDescriptor::MetadataType type, int length = 1);
 
         /** Creates a time series dataset*/
-		bool createTimeSeriesBase(String basePath, String description, String neurodata_type);
+		bool createTimeSeriesBase(TimeSeries* timeSeries);
 		
         /** Creates dataset attributes */
         bool createExtraInfo(String basePath, String name, String desc, String id, uint16 index, uint16 typeIndex);
@@ -151,6 +233,9 @@ namespace NWBRecording
         
         /** Creates a dataset for electrode indices */
 		HDF5RecordingData* createElectrodeDataSet(String basePath, String description, int chunk_size);
+        
+        /** Creates a dataset for electrode indices */
+        HDF5RecordingData* createChannelConversionDataSet(String basePath, String description, int chunk_size);
 		
         /** Adds attributes (e.g. conversion, resolution) to a continuous dataset */
         void createDataAttributes(String basePath, float conversion, float resolution, String unit);
@@ -167,10 +252,11 @@ namespace NWBRecording
 		const String filename;
 		const String GUIVersion;
 
-		OwnedArray<TimeSeries>  continuousDataSets;
-		OwnedArray<TimeSeries> spikeDataSets;
-		OwnedArray<TimeSeries> eventDataSets;
-		std::unique_ptr<TimeSeries> syncMsgDataSet;
+		OwnedArray<ecephys::ElectricalSeries> continuousDataSets;
+		OwnedArray<ecephys::SpikeEventSeries> spikeDataSets;
+		OwnedArray<TTLEventSeries> eventDataSets;
+		std::unique_ptr<AnnotationSeries> messagesDataSet;
+        std::unique_ptr<AnnotationSeries> syncMsgDataSet;
 
 		const String identifierText;
 
