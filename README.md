@@ -1,5 +1,7 @@
 # NWB Format
 
+![header-image](Resources/header-image.png)
+
 A Record Engine plugin for the Open Ephys GUI based on the Neurodata Without Borders 2.X specification.
 
 ## Installation
