@@ -64,7 +64,7 @@ make -j
 make install
 ```
 
-This will build the plugin and copy the `.so` file into the GUI's `plugins` directory. The next time you launch the GUI compiled version of the GUI, `NWB2` should appear as an data format option in the Record Node.
+This will build the plugin and copy the `.so` file into the GUI's `plugins` directory. The next time you launch the compiled version of the GUI, `NWB2` should appear as an data format option in the Record Node.
 
 
 ### macOS
@@ -77,7 +77,7 @@ From the `Build` directory, enter:
 cmake -G "Xcode" ..
 ```
 
-Next, launch Xcode and open the `ephys-socket.xcodeproj` file that now lives in the “Build” directory.
+Next, launch Xcode and open the `nwb-format.xcodeproj` file that now lives in the “Build” directory.
 
 Running the `ALL_BUILD` scheme will compile the plugin; running the `INSTALL` scheme will install the `.bundle` file to `/Users/<username>/Library/Application Support/open-ephys/plugins-api`. `NWB2` should now appear as an data format option in the Record Node.
 
