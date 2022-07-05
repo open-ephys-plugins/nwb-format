@@ -151,13 +151,17 @@ void NWBFileSource::fillRecordInfo()
 
                         info.sampleRate = 2 / (tsArray[2] - tsArray[0]);
 
+                        HeapBlock<float> ccArray(dims[1]);
+                        data = continuous.openDataSet("channel_conversion");
+                        data.read(ccArray.getData(), PredType::NATIVE_FLOAT);
+
                         try
                         {
                             for (int k = 0; k < dims[1]; k++)
                             {
                                 RecordedChannelInfo c;
                                 c.name = "CH" + String(k);
-                                c.bitVolts = bitVolts;
+                                c.bitVolts = ccArray[k] * 1e6;
                                 info.channels.add(c);
                             }   
                             infoArray.add(info);
