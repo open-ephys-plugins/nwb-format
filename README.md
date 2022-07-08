@@ -6,12 +6,11 @@ A Record Engine plugin for the Open Ephys GUI based on the [Neurodata Without Bo
 
 ## Installation
 
-(Coming soon)
+This plugin can be added via the Open Ephys GUI's built-in Plugin Installer. First, make sure there are no Record Nodes in your signal chain. Then, press **ctrl-P** or **⌘P** to open the Plugin Installer, browse to the "NWB Format" plugin, and click the "Install" button. The next time you add a Record Node to the signal chain, `NWB2` will be available in the data format drop-down menu.
 
 ## Usage
 
-(link to documentation)
-
+The specifications of NWB files written by the Open Ephys GUI are available [here](https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/NWB-format.html).
 
 ## Building from source
 
