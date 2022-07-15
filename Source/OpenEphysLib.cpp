@@ -39,8 +39,8 @@ using namespace Plugin;
 extern "C" EXPORT void getLibInfo(Plugin::LibraryInfo* info)
 {
 	info->apiVersion = PLUGIN_API_VER;
-	info->name = "NWB2 format";
-	info->libVersion = "1";
+	info->name = "NWB2 Format";
+	info->libVersion = "0.2.0";
 	info->numPlugins = NUM_PLUGINS;
 }
 
