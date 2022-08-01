@@ -65,7 +65,7 @@ int NWBFile::createFileStructure()
 
 	setAttributeStr("core", "/", "namespace");
 	setAttributeStr("NWBFile", "/", "neurodata_type");
-	setAttributeStr("2.4.0", "/", "nwb_version");
+	setAttributeStr("2.5.0", "/", "nwb_version");
 	setAttributeStr(identifierText, "/", "object_id");
 
 	if (createGroup("/acquisition")) return -1;
