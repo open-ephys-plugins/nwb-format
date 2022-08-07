@@ -88,9 +88,7 @@ int NWBFile::createFileStructure()
 	setAttributeStr("metadata about extracellular electrodes", "general/extracellular_ephys/electrodes", "description");
 	setAttributeStr("hdmf-common", "general/extracellular_ephys/electrodes", "namespace");
 	setAttributeStr("DynamicTable", "general/extracellular_ephys/electrodes", "neurodata_type");
-
-	Uuid identifier;
-	setAttributeStr(identifier.toString(), "general/extracellular_ephys/electrodes", "object_id");
+	setAttributeStr(generateUuid(), "general/extracellular_ephys/electrodes", "object_id");
 
 	if (createGroup("/processing")) return -1;
 
@@ -184,28 +182,24 @@ bool NWBFile::startNewRecording(
 		setAttributeStr("unknown", fullPath, "location");
 		setAttributeStr("core", fullPath, "namespace");
 		setAttributeStr("ElectrodeGroup", fullPath, "neurodata_type");
+		setAttributeStr(generateUuid(), fullPath, "object_id");
 
-		Uuid identifierA;
-		setAttributeStr(identifierA.toString(), fullPath, "object_id");
-
-		
 		createGroup("general/devices/" + groupName);
 
 		setAttributeStr("description", "general/devices/" + groupName, "description");
 		setAttributeStr("unknown", "general/devices/" + groupName, "manufacturer");
 		setAttributeStr("core", "general/devices/" + groupName, "namespace");
 		setAttributeStr("Device", "general/devices/" + groupName, "neurodata_type");
+		setAttributeStr(generateUuid(), "general/devices/" + groupName, "object_id");
 
-		Uuid identifierB;
-		setAttributeStr(identifierB.toString(), "general/devices/" + groupName, "object_id");
-
-		createReference(fullPath + "/device", "general/devices/" + groupName);
+		createReference("/" + fullPath + "/device", "/general/devices/" + groupName);
 
         Array<int> electrode_inds;
         for (int ch = 0; ch < group.size(); ch++)
         {
+			int index = group[ch]->getGlobalIndex();
             electrode_inds.add(totalChannelCount++);
-			all_electrode_inds.add(totalChannelCount);
+			all_electrode_inds.add(index);
 			groupNames.add(groupName);
 			groupReferences.add("/general/extracellular_ephys/" + groupName);
         }
@@ -277,7 +271,19 @@ bool NWBFile::startNewRecording(
         
         for (int ch = 0; ch < sourceInfo->getNumChannels(); ch++)
         {
-            electrode_inds.add(sourceInfo->getSourceChannels()[0]->getGlobalIndex());
+			int globalIndex = sourceInfo->getSourceChannels()[ch]->getGlobalIndex();
+			int tableIndex = all_electrode_inds.indexOf(globalIndex);
+			
+			if (tableIndex > -1)
+			{
+				electrode_inds.add(tableIndex);
+			}
+			else
+			{
+				// If we don't have a matching electrode row, just use zero for now.
+				// In the future this should create a new table row.
+				electrode_inds.add(0);
+			}
         }
         
         ecephys::SpikeEventSeries* spikeEventSeries =
@@ -438,8 +444,7 @@ bool NWBFile::startNewRecording(
 
 	setAttributeStr("hdmf-common", "general/extracellular_ephys/electrodes/id", "namespace");
 	setAttributeStr("ElementIdentifiers", "general/extracellular_ephys/electrodes/id", "neurodata_type");
-	Uuid identifier;
-	setAttributeStr(identifier.toString(), "general/extracellular_ephys/electrodes/id", "object_id");
+	setAttributeStr(generateUuid(), "general/extracellular_ephys/electrodes/id", "object_id");
 
 	ScopedPointer<HDF5RecordingData> groupNamesDataset = createDataSet(BaseDataType::STR(250), 0, 1, "general/extracellular_ephys/electrodes/group_name");
 
@@ -449,16 +454,14 @@ bool NWBFile::startNewRecording(
 	setAttributeStr("the name of the ElectrodeGroup this electrode is a part of", "general/extracellular_ephys/electrodes/group_name", "description");
 	setAttributeStr("hdmf-common", "general/extracellular_ephys/electrodes/group_name", "namespace");
 	setAttributeStr("VectorData", "general/extracellular_ephys/electrodes/group_name", "neurodata_type");
-	Uuid identifier2;
-	setAttributeStr(identifier2.toString(), "general/extracellular_ephys/electrodes/group_name", "object_id");
+	setAttributeStr(generateUuid(), "general/extracellular_ephys/electrodes/group_name", "object_id");
 
 	createReferenceDataSet("general/extracellular_ephys/electrodes/group", groupReferences);
 
 	setAttributeStr("a reference to the ElectrodeGroup this electrode is a part of", "general/extracellular_ephys/electrodes/group", "description");
 	setAttributeStr("hdmf-common", "general/extracellular_ephys/electrodes/group", "namespace");
 	setAttributeStr("VectorData", "general/extracellular_ephys/electrodes/group", "neurodata_type");
-	Uuid identifier3;
-	setAttributeStr(identifier3.toString(), "general/extracellular_ephys/electrodes/group", "object_id");
+	setAttributeStr(generateUuid(), "general/extracellular_ephys/electrodes/group", "object_id");
 
 	return true;
 
@@ -718,6 +721,8 @@ HDF5RecordingData *NWBFile::createElectrodeDataSet(String path, String descripti
 		CHECK_ERROR(setAttributeStr(description, path, "description"));
 		CHECK_ERROR(setAttributeStr("hdmf-common", path, "namespace"));
 		CHECK_ERROR(setAttributeStr("DynamicTableRegion", path, "neurodata_type"));
+		CHECK_ERROR(setAttributeStr(generateUuid(), path, "object_id"));
+		CHECK_ERROR(setAttributeRef("general/extracellular_ephys/electrodes", path, "table"));
 	}
 	return elSet;
 }
