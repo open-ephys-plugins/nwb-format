@@ -69,11 +69,12 @@ bool NWBFileSource::open(File file)
 
 void NWBFileSource::fillRecordInfo()
 {
+
     Group acquisition;
 
     try
     {
-        
+
         acquisition = sourceFile->openGroup("/acquisition/");
         
         int dataSources = (int) acquisition.getNumObjs();
@@ -84,64 +85,41 @@ void NWBFileSource::fillRecordInfo()
             try
             {
 
-                Group dataSource;
                 DataSet data;
                 Attribute attr;
                 DataSpace dSpace;
                 float sampleRate;
                 float bitVolts;
-                hsize_t dims[3];    
+                hsize_t dims[3];
 
                 H5std_string dataSourceName = acquisition.getObjnameByIdx(hsize_t(i));
+                Group dataSource = acquisition.openGroup(dataSourceName);
 
-                StringArray tokens;
-                tokens.addTokens(dataSourceName, ".", "\\");
+                if (dataSource.attrExists("neurodata_type"))
+                {
+                    attr = dataSource.openAttribute("neurodata_type");
+                    H5::StrType type = attr.getStrType();
+                    std::string type_str;
+                    attr.read(type, type_str);
 
-                String processor;
-                String stream;
-                String type;
-
-                for (auto& token : tokens)
-                    std::cout << token << ", ";
-                
-                std::cout << std::endl;
-
-                if (tokens.size() == 1)
-                    continue; //tokens = ["messages"]
-                else 
-                {   
-                    //Found continuous data stream
-                    processor = tokens[0];
-                    stream = tokens[1];
-
-                    if (tokens.size() > 2) //event or spike data
+                    if (!type_str.compare("ElectricalSeries"))
                     {
-                        /* For TTL could be .TLL or .TTL_1 etc. */
-
-                        type = tokens[2];
-
-                    }
-                    else //continuous stream
-                    {
-                        Group continuous = acquisition.openGroup(dataSourceName);
 
                         RecordInfo info;
 
-                        H5std_string processorName = continuous.getObjnameByIdx(hsize_t(0));
-
-                        data = continuous.openDataSet("data");
+                        data = dataSource.openDataSet("data");
 
                         dSpace = data.getSpace();
                         dSpace.getSimpleExtentDims(dims);
 
-                        info.name = tokens[1];
+                        info.name = dataSourceName;
                         info.numSamples = dims[0];
 
                         attr = data.openAttribute("conversion");
                         attr.read(PredType::NATIVE_FLOAT, &bitVolts);
 
                         //Compute sample rate from first few timestamps
-                        data = continuous.openDataSet("timestamps");
+                        data = dataSource.openDataSet("timestamps");
 
                         dSpace = data.getSpace();
                         dSpace.getSimpleExtentDims(dims);
@@ -152,7 +130,7 @@ void NWBFileSource::fillRecordInfo()
                         info.sampleRate = 2 / (tsArray[2] - tsArray[0]);
 
                         HeapBlock<float> ccArray(dims[1]);
-                        data = continuous.openDataSet("channel_conversion");
+                        data = dataSource.openDataSet("channel_conversion");
                         data.read(ccArray.getData(), PredType::NATIVE_FLOAT);
 
                         try
@@ -168,7 +146,6 @@ void NWBFileSource::fillRecordInfo()
                             availableDataSets.add(numRecords);
                             dataPaths.set(numRecords, dataSourceName);
                             numRecords++;
-
                             
                         } catch (GroupIException)
                         {
@@ -178,91 +155,8 @@ void NWBFileSource::fillRecordInfo()
                             std::cout << "!!!AttributeIException!!!" << std::endl;
                         }
 
-                        
- 
                     }
                 }
-                /*
-                String continuousDataPath = (String(recordingName) + "/continuous/");
-                Group continuous = recordings.openGroup(continuousDataPath.toUTF8());
-
-                nProcessors = (int)continuous.getNumObjs();
-
-                for (int j = 0; j < nProcessors; j++)
-                {
-
-                    RecordInfo info;
-
-                    H5std_string processorName = continuous.getObjnameByIdx(hsize_t(j));
-
-                    recordN = recordings.openGroup((continuousDataPath + String(processorName)).toUTF8());
-                    data = recordN.openDataSet("data"); 
-
-                    attr = data.openAttribute("conversion"); //conversion
-                    attr.read(PredType::NATIVE_FLOAT, &bitVolts);
-
-                    //attr = recordN.openAttribute("sample_rate");
-                    //attr.read(PredType::NATIVE_FLOAT,&sampleRate);
-                    //attr = recordN.openAttribute("bit_depth");
-                    //attr.read(PredType::NATIVE_FLOAT,&bitVolts);
-                    dSpace = data.getSpace();
-                    dSpace.getSimpleExtentDims(dims);
-
-                    info.name = processorName;
-                    info.numSamples = dims[0];
-                    info.sampleRate = sampleRate;
-
-                    std::cout << "Got bitVolts: " << bitVolts << std::endl;
-                    std::cout << "Got num samples: " << dims[0] << std::endl;
-                    std::cout << "Got num channels: " << dims[1] << std::endl;
-                    std::cout << "Got sample rate: " << sampleRate << std::endl;
-
-                    //bool foundBitVoltArray = false;
-                    //HeapBlock<float> bitVoltArray(dims[1]);
-
-                    try
-                    {
-                        for (int k = 0; k < dims[1]; k++)
-                        {
-                            RecordedChannelInfo c;
-                            c.name = "CH" + String(k);
-                            c.bitVolts = bitVolts;
-                            info.channels.add(c);
-                        }   
-                        infoArray.add(info);
-                        availableDataSets.add(numRecords);
-                        dataPaths.set(numRecords, continuousDataPath + String(processorName));
-                        numRecords++;
-
-                        recordN = recordings.openGroup((String(i) + "/application_data").toUTF8());
-                        try 
-                        {
-                            DataSet bV = recordN.openDataSet("channel_bit_volts");
-                            bV.read(bitVoltArray.getData(), PredType::NATIVE_FLOAT);
-                            foundBitVoltArray = true;
-                        }
-                        catch (GroupIException)
-                        { }
-                        catch (DataSetIException)
-                        { }
-                        if (!foundBitVoltArray)
-                        {
-                            attr = recordN.openAttribute("channel_bit_volts");
-                            attr.read(ArrayType(PredType::NATIVE_FLOAT, 1, &dims[1]), bitVoltArray);
-                            foundBitVoltArray = true;
-                        }
-                        
-                    } catch (GroupIException)
-                    {
-                        std::cout << "!!!GroupIException!!!" << std::endl; 
-                    } catch (AttributeIException)
-                    {
-                        std::cout << "!!!AttributeIException!!!" << std::endl;
-                    }
-                }
-
-                */
-
             }
             catch (GroupIException)
             {
@@ -279,11 +173,10 @@ void NWBFileSource::fillRecordInfo()
             catch (DataSpaceIException error)
             {
                 std::cout << "!!!DataSpaceIException!!!" << std::endl;
-                PROCESS_ERROR;
             }
+
         }
 
-        std::cout << "Size of dataPaths" << dataPaths.size() << std::endl;
     }
     catch (FileIException error)
     {
@@ -295,6 +188,7 @@ void NWBFileSource::fillRecordInfo()
         std::cout << "!!!GroupIException!!!" << std::endl;
         PROCESS_ERROR;
     }
+
 }
 
 void NWBFileSource::updateActiveRecord(int index)
