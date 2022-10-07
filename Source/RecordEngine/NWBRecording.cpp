@@ -22,6 +22,10 @@
  */
  
  #include "NWBRecording.h"
+
+#include "../../plugin-GUI/Source/Processors/RecordNode/RecordNode.h"
+
+
 #define MAX_BUFFER_SIZE 40960
  
  using namespace NWBRecording;
@@ -66,6 +70,7 @@ RecordEngineManager* NWBRecordEngine::getEngineManager()
 
          spikeChannels.clear();
          eventChannels.clear();
+         continuousChannels.clear();
          continuousChannelGroups.clear();
          datasetIndexes.clear();
          writeChannelIndexes.clear();
@@ -87,6 +92,14 @@ RecordEngineManager* NWBRecordEngine::getEngineManager()
          identifierText = identifier.toString();
 
          nwb = std::make_unique<NWBFile>(basepath, CoreServices::getGUIVersion(), identifierText);
+
+         // get pointers to all continuous channels for electrode table
+         for (int i = 0; i < recordNode->getNumOutputs(); i++)
+         {
+             const ContinuousChannel* channelInfo = getContinuousChannel(i); // channel info object
+
+             continuousChannels.add(channelInfo);
+         }
 
          datasetIndexes.insertMultiple(0, 0, getNumRecordedContinuousChannels());
          writeChannelIndexes.insertMultiple(0, 0, getNumRecordedContinuousChannels());
@@ -135,7 +148,7 @@ RecordEngineManager* NWBRecordEngine::getEngineManager()
          nwb->open(getNumRecordedContinuousChannels() + continuousChannelGroups.size() + eventChannels.size() + spikeChannels.size()); //total channels + timestamp arrays, to create a big enough buffer
 
          //create the recording
-         nwb->startNewRecording(recordingNumber, continuousChannelGroups, eventChannels, spikeChannels);
+         nwb->startNewRecording(recordingNumber, continuousChannelGroups, continuousChannels, eventChannels, spikeChannels);
      }
  }
 

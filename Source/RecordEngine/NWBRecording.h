@@ -20,91 +20,92 @@
  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
  */
- 
- #ifndef NWBRECORDING_H
- #define NWBRECORDING_H
- 
- #include <RecordingLib.h>
- #include "NWBFormat.h"
- 
-namespace NWBRecording {
- 
-/**
-    
-    Record Engine that writes data into NWB 2.0 format
- 
- */
-class NWBRecordEngine : public RecordEngine
+
+#ifndef NWBRECORDING_H
+#define NWBRECORDING_H
+
+#include <RecordingLib.h>
+
+#include "NWBFormat.h"
+
+namespace NWBRecording
 {
-public:
-    
-    /** Constructor */
-    NWBRecordEngine();
-    
-    /** Destructor */
-    ~NWBRecordEngine();
-    
-    /** Launches the manager for this engine */
-    static RecordEngineManager* getEngineManager();
 
-    /** Returns a (hopefully unique) string identifier for this engine */
-    String getEngineId() const override { return "NWB2"; }
-    
-    /** Called when recording starts to open all needed files */
-    void openFiles(File rootFolder, int experimentNumber, int recordingNumber) override;
-    
-    /** Called when recording stops to close all files and do all the necessary cleanup */
-    void closeFiles() override;
-    
-    /** Write continuous data for a channel, including synchronized float timestamps for each sample */
-    void writeContinuousData(int writeChannel,
-                             int realChannel,
-                             const float* dataBuffer,
-                             const double* timestampBuffer,
-                             int size) override;
-    
-    /** Write a single event to disk (TTL or TEXT) */
-    void writeEvent(int eventIndex, const MidiMessage& event) override;
-    
-    /** Write a spike to disk */
-    void writeSpike(int electrodeIndex, const Spike* spike) override;
-    
-    /** Write the timestamp sync text messages to disk*/
-    void writeTimestampSyncText(uint64 streamId, int64 timestamp, float sourceSampleRate, String text) override;
-    
-    /** Allows the file identifier to be set externally*/
-    void setParameter(EngineParameter& parameter) override;
-    
-private:
-    
-    /** Pointer to the current NWB file */
-    std::unique_ptr<NWBFile> nwb;
-    
-    /** For each incoming recorded channel, which dataset (stream) is it associated with? */
-    Array<int> datasetIndexes;
-    
-    /** For each incoming recorded channel, what is the local index within a stream? */
-    Array<int> writeChannelIndexes;
+    /**
 
-    /** Holds pointers to all recorded channels within a stream */
-    Array<ContinuousGroup> continuousChannelGroups;
-    
-    /** Holds pointers to all recorded event channels*/
-    Array<const EventChannel*> eventChannels;
-    
-    /** Holds pointers to all recorded spike channels*/
-    Array<const SpikeChannel*> spikeChannels;
+        Record Engine that writes data into NWB 2.0 format
 
-    /** Holds integer sample numbers for writing */
-    HeapBlock<int64> smpBuffer;
+     */
+    class NWBRecordEngine : public RecordEngine
+    {
+    public:
+        /** Constructor */
+        NWBRecordEngine();
 
-    /** The identifier for the current file (can be set externally) */
-    String identifierText;
+        /** Destructor */
+        ~NWBRecordEngine();
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(NWBRecordEngine);
+        /** Launches the manager for this engine */
+        static RecordEngineManager* getEngineManager();
 
-    
-};
- }
- 
- #endif
+        /** Returns a (hopefully unique) string identifier for this engine */
+        String getEngineId() const override { return "NWB2"; }
+
+        /** Called when recording starts to open all needed files */
+        void openFiles(File rootFolder, int experimentNumber, int recordingNumber) override;
+
+        /** Called when recording stops to close all files and do all the necessary cleanup */
+        void closeFiles() override;
+
+        /** Write continuous data for a channel, including synchronized float timestamps for each sample */
+        void writeContinuousData(int writeChannel,
+                                 int realChannel,
+                                 const float *dataBuffer,
+                                 const double *timestampBuffer,
+                                 int size) override;
+
+        /** Write a single event to disk (TTL or TEXT) */
+        void writeEvent(int eventIndex, const MidiMessage &event) override;
+
+        /** Write a spike to disk */
+        void writeSpike(int electrodeIndex, const Spike *spike) override;
+
+        /** Write the timestamp sync text messages to disk*/
+        void writeTimestampSyncText(uint64 streamId, int64 timestamp, float sourceSampleRate, String text) override;
+
+        /** Allows the file identifier to be set externally*/
+        void setParameter(EngineParameter &parameter) override;
+
+    private:
+        /** Pointer to the current NWB file */
+        std::unique_ptr<NWBFile> nwb;
+
+        /** For each incoming recorded channel, which dataset (stream) is it associated with? */
+        Array<int> datasetIndexes;
+
+        /** For each incoming recorded channel, what is the local index within a stream? */
+        Array<int> writeChannelIndexes;
+
+        /** Holds pointers to all recorded channels within a stream */
+        Array<ContinuousGroup> continuousChannelGroups;
+
+        /** Holds pointers to all recorded event channels*/
+        Array<const EventChannel*> eventChannels;
+
+        /** Holds pointers to all recorded spike channels*/
+        Array<const SpikeChannel*> spikeChannels;
+
+        /** Holds pointers to all incoming continuous channels (used for electrode table)*/
+        Array<const ContinuousChannel*> continuousChannels;
+
+        /** Holds integer sample numbers for writing */
+        HeapBlock<int64> smpBuffer;
+
+        /** The identifier for the current file (can be set externally) */
+        String identifierText;
+
+        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(NWBRecordEngine);
+    };
+}
+
+#endif

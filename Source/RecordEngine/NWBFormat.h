@@ -161,6 +161,7 @@ namespace NWBRecording
         /** Creates the groups required for a new recording, given an array of continuous channels, event channels, and spike channels*/
 		bool startNewRecording(int recordingNumber,
                                const Array<ContinuousGroup>& continuousArray,
+                               const Array<const ContinuousChannel*>& continuousChannels,
                                const Array<const EventChannel*>& eventArray,
                                const Array<const SpikeChannel*>& electrodeArray);
         

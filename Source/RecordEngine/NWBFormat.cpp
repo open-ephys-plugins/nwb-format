@@ -143,6 +143,7 @@ AnnotationSeries::AnnotationSeries(String rootPath, String name, String descript
 bool NWBFile::startNewRecording(
 	int recordingNumber, 
 	const Array<ContinuousGroup>& continuousArray,
+	const Array<const ContinuousChannel*>& continuousChannels,
 	const Array<const EventChannel*>& eventArray, 
 	const Array<const SpikeChannel*>& electrodeArray)
 {
@@ -153,11 +154,23 @@ bool NWBFile::startNewRecording(
 	continuousDataSets.clearQuick(true);
 	spikeDataSets.clearQuick(true);
 	eventDataSets.clearQuick(true);
-    
-    int totalChannelCount = 0;
+
 	Array<int> all_electrode_inds;
 	StringArray groupNames;
 	StringArray groupReferences;
+
+	// 0. put global inds into electrode table
+	for (auto ch : continuousChannels)
+	{
+		all_electrode_inds.add(ch->getGlobalIndex());
+
+		String groupName = ch->getSourceNodeName() + "-"
+			+ String(ch->getSourceNodeId())
+			+ "." + ch->getStreamName();
+
+		groupNames.add(groupName);
+		groupReferences.add("/general/extracellular_ephys/" + groupName);
+	}
 
     // 1. Create continuous datasets
 	for (int i = 0; i < continuousArray.size(); i++)
@@ -198,10 +211,7 @@ bool NWBFile::startNewRecording(
         for (int ch = 0; ch < group.size(); ch++)
         {
 			int index = group[ch]->getGlobalIndex();
-            electrode_inds.add(totalChannelCount++);
-			all_electrode_inds.add(index);
-			groupNames.add(groupName);
-			groupReferences.add("/general/extracellular_ephys/" + groupName);
+            electrode_inds.add(index);
         }
 
         ecephys::ElectricalSeries* electricalSeries =
@@ -272,18 +282,8 @@ bool NWBFile::startNewRecording(
         for (int ch = 0; ch < sourceInfo->getNumChannels(); ch++)
         {
 			int globalIndex = sourceInfo->getSourceChannels()[ch]->getGlobalIndex();
-			int tableIndex = all_electrode_inds.indexOf(globalIndex);
-			
-			if (tableIndex > -1)
-			{
-				electrode_inds.add(tableIndex);
-			}
-			else
-			{
-				// If we don't have a matching electrode row, just use zero for now.
-				// In the future this should create a new table row.
-				electrode_inds.add(0);
-			}
+
+			electrode_inds.add(globalIndex);
         }
         
         ecephys::SpikeEventSeries* spikeEventSeries =
