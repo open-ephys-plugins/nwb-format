@@ -241,7 +241,7 @@ bool NWBFile::startNewRecording(
         }
 
         electricalSeries->timestampDataSet =
-            createTimestampDataSet(electricalSeries->basePath + "/timestamps", CHUNK_XSIZE);
+            createTimestampDataSet(electricalSeries->basePath + "/timestamps", CHUNK_XSIZE, 1/group[0]->getSampleRate());
         if (electricalSeries->timestampDataSet == nullptr) return false;
         
         electricalSeries->sampleNumberDataSet =
@@ -307,7 +307,7 @@ bool NWBFile::startNewRecording(
         }
         
         spikeEventSeries->timestampDataSet =
-            createTimestampDataSet(spikeEventSeries->basePath + "/timestamps", CHUNK_XSIZE);
+            createTimestampDataSet(spikeEventSeries->basePath + "/timestamps", CHUNK_XSIZE, 1/sourceInfo->getSourceChannels()[0]->getSampleRate());
         if (spikeEventSeries->timestampDataSet == nullptr) return false;
         
         spikeEventSeries->sampleNumberDataSet =
@@ -355,7 +355,8 @@ bool NWBFile::startNewRecording(
                 return false;
             }
             
-            ttlEventSeries->timestampDataSet = createTimestampDataSet(ttlEventSeries->basePath + "/timestamps", EVENT_CHUNK_SIZE);
+            ttlEventSeries->timestampDataSet = 
+				createTimestampDataSet(ttlEventSeries->basePath + "/timestamps", EVENT_CHUNK_SIZE, 1/info->getSampleRate());
             if (ttlEventSeries->timestampDataSet == nullptr) return false;
             
             ttlEventSeries->sampleNumberDataSet = createSampleNumberDataSet(ttlEventSeries->basePath + "/sync", EVENT_CHUNK_SIZE);
@@ -381,7 +382,7 @@ bool NWBFile::startNewRecording(
                 return false;
             }
             
-            annotationSeries->timestampDataSet = createTimestampDataSet(annotationSeries->basePath + "/timestamps", EVENT_CHUNK_SIZE);
+            annotationSeries->timestampDataSet = createTimestampDataSet(annotationSeries->basePath + "/timestamps", EVENT_CHUNK_SIZE, 1/info->getSampleRate());
             if (annotationSeries->timestampDataSet == nullptr) return false;
             
             annotationSeries->sampleNumberDataSet = createSampleNumberDataSet(annotationSeries->basePath + "/sync", EVENT_CHUNK_SIZE);
@@ -424,7 +425,7 @@ bool NWBFile::startNewRecording(
     
 	if (recordingNumber == 0)
 	{
-        annotationSeries->timestampDataSet = createTimestampDataSet(annotationSeries->basePath + "/timestamps", 1);
+        annotationSeries->timestampDataSet = createTimestampDataSet(annotationSeries->basePath + "/timestamps", 1, 1);
 		if (annotationSeries->timestampDataSet == nullptr) return false;
 	}
 	else {
@@ -581,6 +582,11 @@ void NWBFile::writeChannelConversions(ecephys::ElectricalSeries* electricalSerie
 	 CHECK_ERROR(spikeDataSets[electrodeId]->timestampDataSet->writeDataBlock(1, BaseDataType::F64, &timestampSec));
 	 writeEventMetadata(spikeDataSets[electrodeId], channel, event);
 
+	 const int64 sampleNumber = event->getSampleNumber();
+
+	 CHECK_ERROR(spikeDataSets[electrodeId]->sampleNumberDataSet->writeDataBlock(1, BaseDataType::I64, &sampleNumber));
+
+
 	 spikeDataSets[electrodeId]->numSamples += 1;
 
  }
@@ -668,17 +674,19 @@ void NWBFile::writeChannelConversions(ecephys::ElectricalSeries* electricalSerie
 		  CHECK_ERROR(setAttributeStr(unit, basePath + "/data", "unit"));
   }
 
-  HDF5RecordingData* NWBFile::createTimestampDataSet(String path, int chunk_size)
+  HDF5RecordingData* NWBFile::createTimestampDataSet(String path, int chunk_size, float interval)
   {
+	  
 	  HDF5RecordingData* tsSet = createDataSet(BaseDataType::F64, 0, chunk_size, path);
+
 	  if (!tsSet)
 		  std::cerr << "Error creating timestamp dataset in " << path << std::endl;
 	  else
 	  {
-		  const int32 one = 1;
-		  CHECK_ERROR(setAttribute(BaseDataType::I32, &one, path, "interval"));
+		  CHECK_ERROR(setAttribute(BaseDataType::F32, &interval, path, "interval"));
 		  CHECK_ERROR(setAttributeStr("seconds", path, "unit"));
 	  }
+
 	  return tsSet;
   }
 

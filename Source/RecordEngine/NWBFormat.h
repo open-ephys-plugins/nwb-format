@@ -226,8 +226,8 @@ namespace NWBRecording
         /** Creates dataset attributes */
         bool createExtraInfo(String basePath, String name, String desc, String id, uint16 index, uint16 typeIndex);
         
-        /** Creates a dataset of synchronized timestamps */
-		HDF5RecordingData* createTimestampDataSet(String basePath, int chunk_size);
+        /** Creates a dataset of synchronized timestamps (interval = 1/sample_rate) */
+		HDF5RecordingData* createTimestampDataSet(String basePath, int chunk_size, float interval);
         
         /** Creates a dataset of sample numbers */
 		HDF5RecordingData* createSampleNumberDataSet(String basePath, int chunk_size);
