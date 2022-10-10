@@ -457,6 +457,16 @@ bool NWBFile::startNewRecording(
 	setAttributeStr("VectorData", "general/extracellular_ephys/electrodes/group_name", "neurodata_type");
 	setAttributeStr(generateUuid(), "general/extracellular_ephys/electrodes/group_name", "object_id");
 
+	ScopedPointer<HDF5RecordingData> locationsDataset = createDataSet(BaseDataType::STR(250), 0, 1, "general/extracellular_ephys/electrodes/location");
+
+	for (int i = 0; i < groupNames.size(); i++)
+		locationsDataset->writeDataBlock(1, BaseDataType::STR(7), String("unknown").toUTF8());
+
+	setAttributeStr("the location of channel within the subject e.g. brain region", "general/extracellular_ephys/electrodes/location", "description");
+	setAttributeStr("hdmf-common", "general/extracellular_ephys/electrodes/location", "namespace");
+	setAttributeStr("VectorData", "general/extracellular_ephys/electrodes/location", "neurodata_type");
+	setAttributeStr(generateUuid(), "general/extracellular_ephys/electrodes/location", "object_id");
+
 	createReferenceDataSet("general/extracellular_ephys/electrodes/group", groupReferences);
 
 	setAttributeStr("a reference to the ElectrodeGroup this electrode is a part of", "general/extracellular_ephys/electrodes/group", "description");
