@@ -84,6 +84,7 @@ int NWBFile::createFileStructure()
 	StringArray colnames;
 	colnames.add("group");
 	colnames.add("group_name");
+	colnames.add("location");
 	setAttributeStrArray(colnames, "general/extracellular_ephys/electrodes", "colnames");
 	setAttributeStr("metadata about extracellular electrodes", "general/extracellular_ephys/electrodes", "description");
 	setAttributeStr("hdmf-common", "general/extracellular_ephys/electrodes", "namespace");
