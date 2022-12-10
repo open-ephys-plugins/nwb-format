@@ -79,6 +79,8 @@ void NWBFileSource::fillRecordInfo()
         
         int dataSources = (int) acquisition.getNumObjs();
 
+        std::map<String, int64> startSampleNumbers;
+
         for (int i = 0; i < dataSources; i++)
         {
 
@@ -129,6 +131,17 @@ void NWBFileSource::fillRecordInfo()
 
                         info.sampleRate = 2 / (tsArray[2] - tsArray[0]);
 
+                        //Get the first sample number to align events
+                        data = dataSource.openDataSet("sync");
+
+                        dSpace =  data.getSpace();
+                        dSpace.getSimpleExtentDims(dims);
+
+                        HeapBlock<int> syncArray(dims[0]);
+                        data.read(syncArray.getData(), PredType::NATIVE_INT);
+
+                        startSampleNumbers[dataSourceName] = syncArray[0];
+
                         HeapBlock<float> ccArray(dims[1]);
                         data = dataSource.openDataSet("channel_conversion");
                         data.read(ccArray.getData(), PredType::NATIVE_FLOAT);
@@ -154,6 +167,38 @@ void NWBFileSource::fillRecordInfo()
                         {
                             std::cout << "!!!AttributeIException!!!" << std::endl;
                         }
+
+                    }
+                    else if (!type_str.compare("TimeSeries"))
+                    {
+                        // Load TTL events
+                        dataSourceName.erase(dataSourceName.find_last_not_of(".TTL")+1);
+
+                        EventInfo info;
+
+                        data = dataSource.openDataSet("data");
+
+                        dSpace = data.getSpace();
+                        dSpace.getSimpleExtentDims(dims);
+
+                        int numEvents = dims[0];
+
+                        HeapBlock<int> stateArray(dims[0]);
+                        data.read(stateArray.getData(), PredType::NATIVE_INT);
+
+                        data = dataSource.openDataSet("sync");
+
+                        HeapBlock<double> tsArray(dims[0]);
+                        data.read(tsArray.getData(), PredType::NATIVE_DOUBLE);
+
+                        for (int k = 0; k < numEvents; k++)
+                        {
+                            info.channels.push_back(abs(stateArray[k]));
+                            info.channelStates.push_back(stateArray[k] > 0);
+                            info.timestamps.push_back(tsArray[k] - startSampleNumbers[dataSourceName]);
+                        }
+
+                        eventInfoMap[dataSourceName] = info;
 
                     }
                 }
@@ -209,6 +254,8 @@ void NWBFileSource::updateActiveRecord(int index)
     {
         PROCESS_ERROR;
     }
+
+    currentStream = dataPaths[index];
 }
 
 void NWBFileSource::seekTo(int64 sample)
@@ -278,7 +325,26 @@ void NWBFileSource::processChannelData(int16* inBuffer, float* outBuffer, int ch
 
 void NWBFileSource::processEventData(EventInfo &eventInfo, int64 start, int64 stop)
 {
-    //TODO
+
+	int local_start = start % getActiveNumSamples();;
+	int local_stop = stop % getActiveNumSamples();
+	int loop_count = start / getActiveNumSamples();
+
+	EventInfo info = eventInfoMap[currentStream];
+
+	int i = 0;
+
+	while (i < info.timestamps.size())
+	{
+		if (info.timestamps[i] >= local_start && info.timestamps[i] < local_stop)
+		{
+			eventInfo.channels.push_back(info.channels[i] - 1);
+			eventInfo.channelStates.push_back((info.channelStates[i]));
+			eventInfo.timestamps.push_back(info.timestamps[i] + loop_count*getActiveNumSamples());
+		}
+		i++;
+	}
+
 }
 
 bool NWBFileSource::isReady()
