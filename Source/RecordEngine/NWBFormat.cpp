@@ -368,7 +368,8 @@ bool NWBFile::startNewRecording(
             
             eventDataSets.add(ttlEventSeries);
 
-        } else if (info->getType() == EventChannel::TEXT)
+        }
+		else if (info->getType() == EventChannel::TEXT)
         {
             AnnotationSeries* annotationSeries = new AnnotationSeries(rootPath, "messages", "Stores timestamped messages generated during an experiment");
             
@@ -604,48 +605,70 @@ void NWBFile::writeChannelConversions(ecephys::ElectricalSeries* electricalSerie
 
  void NWBFile::writeEvent(int eventID, const EventChannel* channel, const Event* event)
  {
-	 if (!eventDataSets[eventID])
-		 return;
+
+	const void* dataSrc;
+	BaseDataType type;
+	int8 ttlVal;
+	String text;
+
+	switch (event->getEventType())
+	{
+	case EventChannel::TTL:
+		ttlVal = (static_cast<const TTLEvent*>(event)->getState() ? 1 : -1) * (static_cast<const TTLEvent*>(event)->getLine() + 1);
+		dataSrc = &ttlVal;
+		type = BaseDataType::I8;
+		break;
+	case EventChannel::TEXT:
+		text = static_cast<const TextEvent*>(event)->getText();
+		dataSrc = text.toUTF8().getAddress();
+		type = BaseDataType::STR(text.length());
+		break;
+	default:
+		dataSrc = static_cast<const BinaryEvent*>(event)->getBinaryDataPointer();
+		type = getEventH5Type(event->getEventType());
+		break;
+	}
+
+	if (eventID == eventDataSets.size()) //MessageCenter event
+	{
+		CHECK_ERROR(messagesDataSet->baseDataSet->writeDataBlock(1, BaseDataType::STR(text.length()), text.toUTF8()));
+
+		const int64 sampleNumber = event->getSampleNumber();
+
+		CHECK_ERROR(messagesDataSet->sampleNumberDataSet->writeDataBlock(1, BaseDataType::I64, &sampleNumber));
+
+		const double timeSec = event->getTimestampInSeconds();
+
+		CHECK_ERROR(messagesDataSet->timestampDataSet->writeDataBlock(1, BaseDataType::F64, &timeSec));
+
+		messagesDataSet->numSamples += 1;
+
+	}
+	else if (eventDataSets[eventID])
+	{
+		CHECK_ERROR(eventDataSets[eventID]->baseDataSet->writeDataBlock(1, type, dataSrc));
+
+		const double timeSec = event->getTimestampInSeconds();
+
+		CHECK_ERROR(eventDataSets[eventID]->timestampDataSet->writeDataBlock(1, BaseDataType::F64, &timeSec));
+
+		const int64 sampleNumber = event->getSampleNumber();
+
+		CHECK_ERROR(eventDataSets[eventID]->sampleNumberDataSet->writeDataBlock(1, BaseDataType::I64, &sampleNumber));
+
+		if (event->getEventType() == EventChannel::TTL)
+		{
+			const uint64 ttlWord = static_cast<const TTLEvent*>(event)->getWord();
+			CHECK_ERROR(eventDataSets[eventID]->ttlWordDataSet->writeDataBlock(1, BaseDataType::U64, &ttlWord));
+		}
+
+		eventDataSets[eventID]->numSamples += 1;
+	}
+	else
+	{
+		//Attempted to write an event to disk from unknown event source
+	}
 	 
-	 const void* dataSrc;
-	 BaseDataType type;
-	 int8 ttlVal;
-	 String text;
-
-	 switch (event->getEventType())
-	 {
-	 case EventChannel::TTL:
-		 ttlVal = (static_cast<const TTLEvent*>(event)->getState() ? 1 : -1) * (static_cast<const TTLEvent*>(event)->getLine() + 1);
-		 dataSrc = &ttlVal;
-		 type = BaseDataType::I8;
-		 break;
-	 case EventChannel::TEXT:
-		 text = static_cast<const TextEvent*>(event)->getText();
-		 dataSrc = text.toUTF8().getAddress();
-		 type = BaseDataType::STR(text.length());
-		 break;
-	 default:
-		 dataSrc = static_cast<const BinaryEvent*>(event)->getBinaryDataPointer();
-		 type = getEventH5Type(event->getEventType());
-		 break;
-	 }
-	 CHECK_ERROR(eventDataSets[eventID]->baseDataSet->writeDataBlock(1, type, dataSrc));
-
-	 const double timeSec = event->getTimestampInSeconds();
-
-	 CHECK_ERROR(eventDataSets[eventID]->timestampDataSet->writeDataBlock(1, BaseDataType::F64, &timeSec));
-
-	 const int64 sampleNumber = event->getSampleNumber();
-
-	 CHECK_ERROR(eventDataSets[eventID]->sampleNumberDataSet->writeDataBlock(1, BaseDataType::I64, &sampleNumber));
-
-	 if (event->getEventType() == EventChannel::TTL)
-	 {
-        const uint64 ttlWord = static_cast<const TTLEvent*>(event)->getWord();
-		CHECK_ERROR(eventDataSets[eventID]->ttlWordDataSet->writeDataBlock(1, BaseDataType::U64, &ttlWord));
-	 }
-	 
-	 eventDataSets[eventID]->numSamples += 1;
  }
 
  void NWBFile::writeTimestampSyncText(uint16 sourceID, int64 sampleNumber, float sourceSampleRate, String text)
