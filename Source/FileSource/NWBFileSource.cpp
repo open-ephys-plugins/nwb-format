@@ -120,16 +120,30 @@ void NWBFileSource::fillRecordInfo()
                         attr = data.openAttribute("conversion");
                         attr.read(PredType::NATIVE_FLOAT, &bitVolts);
 
-                        //Compute sample rate from first few timestamps
                         data = dataSource.openDataSet("timestamps");
 
-                        dSpace = data.getSpace();
-                        dSpace.getSimpleExtentDims(dims);
+                        info.sampleRate = -1.0f;
 
-                        HeapBlock<double> tsArray(dims[0]);
-                        data.read(tsArray.getData(), PredType::NATIVE_DOUBLE);
+                        if (data.attrExists("interval"))
+                        {
+                            attr = data.openAttribute("interval");
+                            double interval;
+                            attr.read(PredType::NATIVE_DOUBLE, &interval);
+                            double sampleRate = 1.0f / interval;
 
-                        info.sampleRate = 2 / (tsArray[2] - tsArray[0]);
+                            info.sampleRate = sampleRate;
+                        }
+                        else
+                        {
+                            dSpace = data.getSpace();
+                            dSpace.getSimpleExtentDims(dims);
+
+                            HeapBlock<double> tsArray(dims[0]);
+                            data.read(tsArray.getData(), PredType::NATIVE_DOUBLE);
+
+                            if (tsArray[2] > 0 && tsArray[0] > 0)
+                                info.sampleRate = 2 / (tsArray[2] - tsArray[0]);
+                        }
 
                         //Get the first sample number to align events
                         data = dataSource.openDataSet("sync");
