@@ -78,7 +78,7 @@
 #define H5O_SHMESG_MAX_LIST_SIZE 5000
 
 /* Flags for H5Oget_info.
- * Theses flags determine which fields will be filled in in the H5O_info_t
+ * These flags determine which fields will be filled in in the H5O_info_t
  * struct.
  */
 #define H5O_INFO_BASIC     0x0001u /* Fill in the fileno, addr, type, and rc fields */
@@ -88,7 +88,7 @@
 
 //! <!-- [H5O_native_info_fields_snip] -->
 /**
- * Flags for H5Oget_native_info().  Theses flags determine which fields will be
+ * Flags for H5Oget_native_info().  These flags determine which fields will be
  * filled in in the \ref H5O_native_info_t struct.
  */
 #define H5O_NATIVE_INFO_HDR       0x0008u /* Fill in the hdr field */

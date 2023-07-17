@@ -714,7 +714,7 @@ typedef struct H5AC_cache_config_t {
 
     int metadata_write_strategy;
     /**< Desired metadata write strategy. The valid values for this field
-     * are:\n #H5AC_METADATA_WRITE_STRATEGY__PROCESS_0_ONLY: Specifies tha only
+     * are:\n #H5AC_METADATA_WRITE_STRATEGY__PROCESS_0_ONLY: Specifies that only
      * process zero is allowed to write dirty metadata to disk.\n
      * #H5AC_METADATA_WRITE_STRATEGY__DISTRIBUTED: Specifies that process zero
      * still makes the decisions as to what entries should be flushed, but the
