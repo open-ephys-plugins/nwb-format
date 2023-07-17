@@ -236,7 +236,7 @@ H5_DLL herr_t H5Adelete(hid_t loc_id, const char *attr_name);
  *
  *          The attribute to be removed is specified by a position in an
  *          index, \p n. The type of index is specified by \p idx_type and
- *          may be #H5_INDEX_NAME, for an alpha-numeric index by name, or
+ *          may be #H5_INDEX_NAME, for an alphanumeric index by name, or
  *          #H5_INDEX_CRT_ORDER, for an index by creation order. The order
  *          in which the index is to be traversed is specified by \p order
  *          and may be #H5_ITER_INC (increment) for top-down iteration,
@@ -244,7 +244,7 @@ H5_DLL herr_t H5Adelete(hid_t loc_id, const char *attr_name);
  *          #H5_ITER_NATIVE, in which case HDF5 will iterate in the
  *          fastest-available order. For example, if \p idx_type, \p order,
  *          and \p n are set to #H5_INDEX_NAME, #H5_ITER_INC, and 5,
- *          respectively, the fifth attribute by alpha-numeric order of
+ *          respectively, the fifth attribute by alphanumeric order of
  *          attribute names will be removed.
  *
  *          For a discussion of \p idx_type and \p order, the valid values
@@ -667,7 +667,7 @@ H5_DLL hid_t H5Aget_type(hid_t attr_id);
  *          For example, if \p idx_type, \p order, and \p idx are set to
  *          #H5_INDEX_NAME, #H5_ITER_INC, and 5, respectively, the attribute
  *          in question is the fifth attribute from the beginning of the
- *          alpha-numeric index of attribute names. If \p order were set to
+ *          alphanumeric index of attribute names. If \p order were set to
  *          #H5_ITER_DEC, it would be the fifth attribute from the end of
  *          the index.
  *
@@ -741,7 +741,7 @@ H5_DLL herr_t H5Aiterate2(hid_t loc_id, H5_index_t idx_type, H5_iter_order_t ord
  *          For example, if \p idx_type, \p order, and \p idx are set to
  *          #H5_INDEX_NAME, #H5_ITER_INC, and 5, respectively, the attribute
  *          in question is the fifth attribute from the beginning of the
- *          alpha-numeric index of attribute names. If \p order were set to
+ *          alphanumeric index of attribute names. If \p order were set to
  *          #H5_ITER_DEC, it would be the fifth attribute from the end of
  *          the index.
  *

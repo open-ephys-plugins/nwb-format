@@ -882,7 +882,7 @@ String NWBFile::generateUuid()
     return id.toDashedString();
 }
 
-  //These two methods whould be easy to adapt to support array types for all base types, for now
+  //These two methods would be easy to adapt to support array types for all base types, for now
   //length is only used for string types.
   NWBFile::BaseDataType NWBFile::getEventH5Type(EventChannel::Type type, int length)
   {
