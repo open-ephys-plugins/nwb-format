@@ -165,7 +165,7 @@ namespace NWBRecording
                                const Array<const EventChannel*>& eventArray,
                                const Array<const SpikeChannel*>& electrodeArray);
         
-        /** Writes the num_samples value and closes the relevent datasets */
+        /** Writes the num_samples value and closes the relevant datasets */
 		void stopRecording();
         
         /** Writes continuous data for a particular channel */
@@ -241,10 +241,10 @@ namespace NWBRecording
         /** Adds attributes (e.g. conversion, resolution) to a continuous dataset */
         void createDataAttributes(String basePath, float conversion, float resolution, String unit);
 		
-        /** Creates a dataset for channel metdata */
+        /** Creates a dataset for channel metadata */
         bool createChannelMetadataSets(String basePath, const MetadataObject* info);
 		
-        /** Creates a dataset for event metdata */
+        /** Creates a dataset for event metadata */
         bool createEventMetadataSets(String basePath, TimeSeries* timeSeries, const MetadataEventObject* info);
 
         /** Writes metadata associated with an event*/

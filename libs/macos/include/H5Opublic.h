@@ -1214,7 +1214,7 @@ H5_DLL ssize_t H5Oget_comment_by_name(hid_t loc_id, const char *name, char *comm
  *          <em>best effort</em> setting. If the application passes in
  *          a value indicating iteration in creation order and a group is
  *          encountered that was not tracked in creation order, that group
- *          will be iterated over in alpha-numeric order by name, or
+ *          will be iterated over in alphanumeric order by name, or
  *          <em>name order</em>.  (<em>Name order</em> is the native order
  *          used by the HDF5 library and is always available.)
  *
@@ -1389,7 +1389,7 @@ H5_DLL herr_t H5Ovisit3(hid_t obj_id, H5_index_t idx_type, H5_iter_order_t order
  *          <em>best effort</em> setting. If the application passes in a
  *          value indicating iteration in creation order and a group is
  *          encountered that was not tracked in creation order, that group
- *          will be iterated over in alpha-numeric order by name, or
+ *          will be iterated over in alphanumeric order by name, or
  *          <em>name order</em>.  (<em>Name order</em> is the native order
  *          used by the HDF5 library and is always available.)
  *
@@ -2295,7 +2295,7 @@ H5_DLL herr_t H5Oget_info_by_idx2(hid_t loc_id, const char *group_name, H5_index
  *          <em>best effort</em> setting. If the application passes in
  *          a value indicating iteration in creation order and a group is
  *          encountered that was not tracked in creation order, that group
- *          will be iterated over in alpha-numeric order by name, or
+ *          will be iterated over in alphanumeric order by name, or
  *          <em>name order</em>.  (<em>Name order</em> is the native order
  *          used by the HDF5 library and is always available.)
  *
@@ -2457,7 +2457,7 @@ H5_DLL herr_t H5Ovisit1(hid_t obj_id, H5_index_t idx_type, H5_iter_order_t order
  *          <em>best effort</em> setting. If the application passes in a
  *          value indicating iteration in creation order and a group is
  *          encountered that was not tracked in creation order, that group
- *          will be iterated over in alpha-numeric order by name, or
+ *          will be iterated over in alphanumeric order by name, or
  *          <em>name order</em>.  (<em>Name order</em> is the native order
  *          used by the HDF5 library and is always available.)
  *
@@ -2584,7 +2584,7 @@ H5_DLL herr_t H5Ovisit_by_name1(hid_t loc_id, const char *obj_name, H5_index_t i
  *          <em>best effort</em> setting. If the application passes in
  *          a value indicating iteration in creation order and a group is
  *          encountered that was not tracked in creation order, that group
- *          will be iterated over in alpha-numeric order by name, or
+ *          will be iterated over in alphanumeric order by name, or
  *          <em>name order</em>.  (<em>Name order</em> is the native order
  *          used by the HDF5 library and is always available.)
  *
@@ -2748,7 +2748,7 @@ H5_DLL herr_t H5Ovisit2(hid_t obj_id, H5_index_t idx_type, H5_iter_order_t order
  *          <em>best effort</em> setting. If the application passes in a
  *          value indicating iteration in creation order and a group is
  *          encountered that was not tracked in creation order, that group
- *          will be iterated over in alpha-numeric order by name, or
+ *          will be iterated over in alphanumeric order by name, or
  *          <em>name order</em>.  (<em>Name order</em> is the native order
  *          used by the HDF5 library and is always available.)
  *

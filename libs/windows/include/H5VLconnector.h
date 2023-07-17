@@ -56,7 +56,7 @@ typedef enum H5VL_attr_get_t {
     H5VL_ATTR_GET_TYPE          /* datatype                            */
 } H5VL_attr_get_t;
 
-/* types for attribute SPECFIC callback */
+/* types for attribute SPECIFIC callback */
 typedef enum H5VL_attr_specific_t {
     H5VL_ATTR_DELETE, /* H5Adelete(_by_name/idx)             */
     H5VL_ATTR_EXISTS, /* H5Aexists(_by_name)                 */
@@ -77,7 +77,7 @@ typedef enum H5VL_dataset_get_t {
     H5VL_DATASET_GET_TYPE          /* datatype                            */
 } H5VL_dataset_get_t;
 
-/* types for dataset SPECFIC callback */
+/* types for dataset SPECIFIC callback */
 typedef enum H5VL_dataset_specific_t {
     H5VL_DATASET_SET_EXTENT, /* H5Dset_extent                       */
     H5VL_DATASET_FLUSH,      /* H5Dflush                            */
@@ -93,7 +93,7 @@ typedef enum H5VL_datatype_get_t {
     H5VL_DATATYPE_GET_TCPL    /* datatype creation property list          */
 } H5VL_datatype_get_t;
 
-/* types for datatype SPECFIC callback */
+/* types for datatype SPECIFIC callback */
 typedef enum H5VL_datatype_specific_t { H5VL_DATATYPE_FLUSH, H5VL_DATATYPE_REFRESH } H5VL_datatype_specific_t;
 
 /* Typedef and values for native VOL connector named datatype optional VOL operations */
@@ -132,7 +132,7 @@ typedef enum H5VL_group_get_t {
     H5VL_GROUP_GET_INFO  /* group info                       */
 } H5VL_group_get_t;
 
-/* types for group SPECFIC callback */
+/* types for group SPECIFIC callback */
 typedef enum H5VL_group_specific_t { H5VL_GROUP_FLUSH, H5VL_GROUP_REFRESH } H5VL_group_specific_t;
 
 /* Typedef for VOL connector group optional VOL operations */

@@ -755,7 +755,7 @@
 /* Version number of package */
 #define H5_VERSION "1.12.1"
 
-/* Data accuracy is prefered to speed during data conversions */
+/* Data accuracy is preferred to speed during data conversions */
 #define H5_WANT_DATA_ACCURACY 1
 
 /* Check exception handling functions during data conversions */
