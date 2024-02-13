@@ -10,7 +10,7 @@ endif()
 get_filename_component(PROJECT_FOLDER ${CMAKE_CURRENT_SOURCE_DIR} ABSOLUTE)
 get_filename_component(PLUGIN_NAME ${PROJECT_FOLDER} NAME)
 
-set(CMAKE_OSX_ARCHITECTURES "x86_64" CACHE STRING "Build architecture for Mac OS X" FORCE)
+set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "Build architecture for Mac OS X" FORCE)
 
 project(OE_PLUGIN_${PLUGIN_NAME})
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
@@ -80,9 +80,9 @@ elseif(LINUX)
 elseif(APPLE)
 	set_target_properties(${PLUGIN_NAME} PROPERTIES BUNDLE TRUE)
 	set_property(TARGET ${PLUGIN_NAME} APPEND_STRING PROPERTY LINK_FLAGS
-	"-undefined dynamic_lookup -rpath @loader_path/../../../../shared-api8")
+	"-undefined dynamic_lookup -rpath @loader_path/../../../../shared-api9")
 
-	install(TARGETS ${PLUGIN_NAME} DESTINATION $ENV{HOME}/Library/Application\ Support/open-ephys/plugins-api8)
+	install(TARGETS ${PLUGIN_NAME} DESTINATION $ENV{HOME}/Library/Application\ Support/open-ephys/plugins-api9)
 	set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/libs/macos)
 endif()
 
@@ -96,7 +96,7 @@ foreach( src_file IN ITEMS ${SRC_FILES})
 endforeach()
 
 #additional libraries needed
-find_package(HDF5 1.12.1 EXACT COMPONENTS C CXX)
+find_package(HDF5 1.14.3 EXACT COMPONENTS C CXX)
 
 if(NOT HDF5_FOUND) #if package finding fails, try manually
 	#unset variables in case a wrong version has been found
