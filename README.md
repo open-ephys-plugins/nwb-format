@@ -10,8 +10,8 @@ This plugin can be added via the Open Ephys GUI's built-in Plugin Installer. Fir
 
 ## Usage
 
-The specifications of NWB files written by the Open Ephys GUI are available [here](https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/NWB-format.html).
-
+The specifications of NWB files written by the Open Ephys GUI are available [here](https://open-ephys.github.io/gui-docs/User-Manual/Data-formats/NWB-format.html).
+ 
 ## Building from source
 
 First, follow the instructions on [this page](https://open-ephys.github.io/gui-docs/Developer-Guide/Compiling-the-GUI.html) to build the Open Ephys GUI.
