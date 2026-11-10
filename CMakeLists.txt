@@ -33,8 +33,14 @@ set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS
 
 
 set(SOURCE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/Source)
-file(GLOB_RECURSE SRC_FILES LIST_DIRECTORIES false "${SOURCE_PATH}/*.cpp" "${SOURCE_PATH}/*.h")
+file(GLOB_RECURSE SRC_FILES LIST_DIRECTORIES false "${SOURCE_PATH}/*.cpp" "${SOURCE_PATH}/*.h" "${SOURCE_PATH}/*.hpp")
+# Only compile the AqNWB library sources (skip its tests, demos, docs and resources)
+list(FILTER SRC_FILES EXCLUDE REGEX ".*/aqnwb/.*")
+file(GLOB_RECURSE AQNWB_SRC_FILES LIST_DIRECTORIES false "${SOURCE_PATH}/aqnwb/src/*.cpp" "${SOURCE_PATH}/aqnwb/src/*.hpp")
+list(APPEND SRC_FILES ${AQNWB_SRC_FILES})
 set(GUI_COMMONLIB_DIR ${GUI_BASE_DIR}/installed_libs)
+
+include_directories(${SOURCE_PATH}/aqnwb/src)
 
 set(CONFIGURATION_FOLDER $<$<CONFIG:Debug>:Debug>$<$<NOT:$<CONFIG:Debug>>:Release>)
 
@@ -120,9 +126,11 @@ include_directories(${HDF5_INCLUDE_DIRS})
 target_link_libraries(${PLUGIN_NAME} ${HDF5_LIBRARIES} ${HDF5_CXX_LIBRARIES})
 target_include_directories(${PLUGIN_NAME} PRIVATE ${HDF5_INCLUDE_DIRS})
 
-#target_include_directories(${PLUGIN_NAME} PUBLIC ../OpenEphysHDF5Lib/Source)
-
-
-# Open Ephys common libraries
-include(link_open_ephys_lib.cmake)
-link_open_ephys_lib(${PLUGIN_NAME} OpenEphysHDF5)
+#copy the dependencies when installing
+if (MSVC)
+	install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/libs/windows/bin/ DESTINATION ${GUI_BIN_DIR}/shared CONFIGURATIONS ${CMAKE_CONFIGURATION_TYPES})
+elseif(LINUX)
+	install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/libs/linux/bin/ DESTINATION ${GUI_BIN_DIR}/shared)
+elseif(APPLE)
+	install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/libs/macos/bin/ DESTINATION $ENV{HOME}/Library/Application\ Support/open-ephys/shared-api10)
+endif()

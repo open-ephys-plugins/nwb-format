@@ -26,20 +26,25 @@
 
 #include <FileSourceHeaders.h>
 
-//TODO: Define these:
-//#define MIN_NWB_VERSION
-//#define MAX_NWB_VERSION
+#include <memory>
+#include <string>
+#include <vector>
 
-class HDF5RecordingData;
-namespace H5
-{
-class DataSet;
-class H5File;
-class DataType;
-} // namespace H5
+#include "io/BaseIO.hpp"
+#include "io/ReadIO.hpp"
+#include "nwb/ecephys/ElectricalSeries.hpp"
+
+/** Lazy reader for a dataset or attribute of any type (the values are read with the type stored in the file) */
+template <AQNWB::Types::StorageObjectType OTYPE>
+using FieldReader = AQNWB::IO::ReadDataWrapper<OTYPE, std::any>;
+using DatasetReader = FieldReader<AQNWB::NWB::DatasetField>;
 
 /**
-    A File Source plugin that can read data from NWB 2.0 files
+    A File Source plugin that can read data from NWB 2.x files using AqNWB
+
+    Reads the ElectricalSeries in /acquisition as continuous data, and TTL and text events
+    from the EventsTables in /events (or, for files written by earlier versions of the plugin,
+    from the TTL TimeSeries in /acquisition).
  */
 class NWBFileSource : public FileSource
 {
@@ -53,20 +58,17 @@ public:
     /** Attempt to open the file, and return true if successful */
     bool open (File file) override;
 
-    /** Fill rthe infoArray and eventInfoAray with the relevant information for all recordings*/
+    /** Fill the infoArray and eventInfoMap with the relevant information for all recordings*/
     void fillRecordInfo() override;
 
     /** Update the recording to be read in */
     void updateActiveRecord (int index) override;
 
-    /** Reads nSamples of int16 data into a temporary buffer */
+    /** Reads nSamples of data from the active recording */
     int readData (float* buffer, int nSamples) override;
 
-    /** Seek to a specific sample number within the active recordinfg*/
+    /** Seek to a specific sample number within the active recording */
     void seekTo (int64 sample) override;
-
-    /** DEPRECATED: Convert nSamples of data from int16 to float */
-    //void processChannelData (int16* inBuffer, float* outBuffer, int channel, int64 numSamples) override;
 
     /** Add info about events occurring within a sample range */
     void processEventData (EventInfo& info, int64 startTimestamp, int64 stopTimestamp) override;
@@ -75,18 +77,63 @@ public:
     bool isReady() override;
 
 private:
-    ScopedPointer<H5::H5File> sourceFile;
-    ScopedPointer<H5::DataSet> dataSet;
+    /** A range of consecutive rows of an ElectricalSeries with consecutive sample numbers */
+    struct Segment
+    {
+        int64 firstRow;
+        int64 firstSampleNumber;
+        int64 numRows;
+    };
 
-    Array<String> dataPaths;
+    /** Information about an ElectricalSeries needed for reading */
+    struct StreamInfo
+    {
+        std::shared_ptr<AQNWB::NWB::ElectricalSeries> series;
+        std::shared_ptr<DatasetReader> data; ///< reader for the data of the series
+        bool data2D = true; ///< false for 1D data (a single channel)
+        int64 numSamples = 0;
+        int numChannels = 0;
+        std::vector<float> scale; ///< factor to convert the stored values to microvolts, per channel
+        float offset = 0.0f; ///< offset in microvolts
+        std::vector<Segment> segments; ///< sample numbers of the rows (empty if unknown)
+    };
+
+    /** Read the information about the ElectricalSeries at the given path. Returns false if not supported */
+    bool readStreamInfo (const std::string& path, StreamInfo& stream, RecordInfo& info);
+
+    /** Read the sample numbers of an ElectricalSeries as segments of consecutive sample numbers */
+    static std::vector<Segment> readSegments (const DatasetReader& sampleNumbers, int64 numRows);
+
+    /** Row of the active ElectricalSeries for a sample number, or -1 if the sample number was not recorded */
+    static int64 getRow (const StreamInfo& stream, int64 sampleNumber);
+
+    /** Index of the record (ElectricalSeries) of the events of "<processor>-<id>.<stream>", or -1 if not found */
+    int findStream (const String& sourceAndStream) const;
+
+    /** Read the TTL and text events from the EventsTables in /events */
+    void readEventsTables();
+
+    /** Read the TTL events from legacy TTL TimeSeries in /acquisition (files written by the original plugin) */
+    void readLegacyEvents (const std::string& path);
+
+    /** Read the text messages from the legacy AnnotationSeries /acquisition/messages (files written by the
+        original plugin) */
+    void readLegacyMessages (const std::string& path);
+
+    /** Add an event to the events of a stream */
+    void addEvent (const String& streamName, int16 channel, int16 state, int64 row, const String& text);
+
+    /** True if the field exists and is a dataset (e.g., the legacy "sync" dataset rather than the sync group) */
+    bool isDataset (const DatasetReader& field) const;
+
+    std::shared_ptr<AQNWB::IO::BaseIO> io;
+
+    /** One StreamInfo per record (ElectricalSeries) */
+    std::vector<StreamInfo> streams;
 
     int64 samplePos;
 
-    int nProcessors;
-    Array<int> availableDataSets;
-    bool skipRecordEngineCheck;
-
-    bool hasEventData;
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (NWBFileSource);
 };
 
 #endif // NWBFILESOURCE_H_INCLUDED

@@ -26,16 +26,23 @@
 
 #include <RecordingLib.h>
 
-#include "NWBFormat.h"
+#include <map>
+
+#include "Channel.hpp"
+#include "io/BaseIO.hpp"
+#include "nwb/NWBFile.hpp"
+#include "nwb/epoch/TimeIntervals.hpp"
+#include "nwb/event/EventsTable.hpp"
+
+typedef Array<const ContinuousChannel*> ContinuousGroup;
 
 namespace NWBRecording
 {
 
-/**
+/** Version of the plugin (was_generated_by of the NWB files; must match libVersion in OpenEphysLib.cpp) */
+inline constexpr const char* pluginVersion = "2.0.0";
 
-        Record Engine that writes data into NWB 2.0 format
-
-     */
+/** Record Engine that writes data in the NWB 2 format (NWB 2.11) using AqNWB */
 class NWBRecordEngine : public RecordEngine
 {
 public:
@@ -77,29 +84,165 @@ public:
     void setParameter (EngineParameter& parameter) override;
 
 private:
-    /** Pointer to the current NWB file */
-    std::unique_ptr<NWBFile> nwb;
+    /** Collect the channel information and create the AqNWB channel mappings */
+    void createRecordingArrays();
 
-    /** For each incoming recorded channel, which dataset (stream) is it associated with? */
-    Array<int> datasetIndexes;
+    /** Finalize and close the current file (if any) and release all recording objects */
+    void closeFile();
 
-    /** For each incoming recorded channel, what is the local index within a stream? */
-    Array<int> writeChannelIndexes;
+    /** Create the <series>/sync/sample_numbers dataset for the TimeSeries at seriesPath */
+    std::shared_ptr<AQNWB::IO::BaseRecordingData> createSampleNumbersDataSet (const std::string& seriesPath,
+                                                                              AQNWB::Types::SizeType chunkSize,
+                                                                              const std::string& description);
 
-    /** Holds pointers to all recorded channels within a stream */
-    Array<ContinuousGroup> continuousChannelGroups;
+    /** Start tracking the time range of a new recording (epoch) */
+    void startEpoch (int recordingNumber);
 
-    /** Holds pointers to all recorded event channels*/
-    Array<const EventChannel*> eventChannels;
+    /** Create the epochs table with float64 start and stop times */
+    bool createEpochsTable();
 
-    /** Holds pointers to all recorded spike channels*/
-    Array<const SpikeChannel*> spikeChannels;
+    /** Create one EventsTable per recorded event channel and the sync messages table */
+    bool createEventsTables();
 
-    /** Holds pointers to all incoming continuous channels (used for electrode table)*/
-    Array<const ContinuousChannel*> continuousChannels;
+    /** Create an EventsTable with a float64 timestamp column, the optional annotation column, and custom columns */
+    std::shared_ptr<AQNWB::NWB::EventsTable> createEventsTable (const std::string& name,
+                                                                const std::string& description,
+                                                                const std::string& sourceDescription,
+                                                                float timestampResolution,
+                                                                bool annotationColumn,
+                                                                const std::vector<AQNWB::NWB::DynamicTable::DataSpecPtr>& customColumns);
 
-    /** Holds integer sample numbers for writing */
-    HeapBlock<int64> smpBuffer;
+    /** Write the pending sync messages whose stream start time is known. If force is true, the remaining
+        messages are written with the start time of the recording as timestamp. */
+    void writeSyncMessages (bool force);
+
+    /** Set the session start time and the timestamps reference time of the file to the time of timestamp 0,
+        from the 'Software Time' sync message (system time in ms) and the first timestamp of the recording */
+    void setReferenceTime (int64 softwareTimeMs, double firstTimestamp);
+
+    /** Extend the time range of the current recording (for its epoch) to the timestamps of written data, and
+        flush the file periodically. Called for continuous data, events and spikes, so that recordings without
+        continuous channels get an epoch and are flushed too. */
+    void dataWritten (double firstTimestamp, double lastTimestamp);
+
+    /** Log a failed AqNWB operation. Returns true if the status indicates success. */
+    static bool checkStatus (AQNWB::Types::Status status, const String& operation);
+
+    /** NWB I/O object */
+    std::shared_ptr<AQNWB::IO::BaseIO> io;
+
+    /** NWB file */
+    std::shared_ptr<AQNWB::NWB::NWBFile> nwbfile;
+
+    /** Recording directory (rootFolder of openFiles) of the open file */
+    File openFileFolder;
+
+    /** AqNWB channels for all continuous channels entering the Record Node, grouped by stream (electrodes table) */
+    std::vector<AQNWB::Types::ChannelVector> electrodeArrays;
+
+    /** Open Ephys channel type (ContinuousChannel::Type) of each electrode, in the order of the electrodes table */
+    std::vector<uint8_t> electrodeChannelTypes;
+
+    /** Add the channel_type column to the electrodes table */
+    bool addChannelTypeColumn (const std::shared_ptr<AQNWB::NWB::ElectrodesTable>& electrodesTable);
+
+    /** AqNWB channels for the recorded continuous channels, one ChannelVector per stream (ElectricalSeries) */
+    std::vector<AQNWB::Types::ChannelVector> recordingArrays;
+
+    /** Names of the ElectricalSeries, one per entry in recordingArrays */
+    std::vector<std::string> recordingArraysNames;
+
+    /** AqNWB channels for each recorded spike channel (SpikeEventSeries) */
+    std::vector<AQNWB::Types::ChannelVector> spikeRecordingArrays;
+
+    /** Names of the SpikeEventSeries, one per entry in spikeRecordingArrays */
+    std::vector<std::string> spikeRecordingArraysNames;
+
+    /** Recording object indexes of the ElectricalSeries, one per entry in recordingArrays */
+    std::vector<AQNWB::Types::SizeType> esContainerIndexes;
+
+    /** Recording object indexes of the SpikeEventSeries, one per entry in spikeRecordingArrays */
+    std::vector<AQNWB::Types::SizeType> spikeContainerIndexes;
+
+    /** For each write channel (index among all recorded channels): index into recordingArrays */
+    std::vector<size_t> writeChannelSeriesIndexes;
+
+    /** For each write channel: position of the channel within its ElectricalSeries */
+    std::vector<size_t> writeChannelLocalIndexes;
+
+    /** Sample number datasets (<series>/sync/sample_numbers), one per ElectricalSeries / SpikeEventSeries */
+    std::vector<std::shared_ptr<AQNWB::IO::BaseRecordingData>> esSampleNumbers;
+    std::vector<std::shared_ptr<AQNWB::IO::BaseRecordingData>> spikeSampleNumbers;
+
+    /** Number of sample numbers written to each dataset in esSampleNumbers / spikeSampleNumbers */
+    std::vector<AQNWB::Types::SizeType> esSampleNumbersWritten;
+    std::vector<AQNWB::Types::SizeType> spikeSampleNumbersWritten;
+
+    /** Epochs table with one row per recording */
+    std::shared_ptr<AQNWB::NWB::TimeIntervals> epochs;
+
+    /** Type of data stored in the EventsTable of an event channel */
+    enum class EventTableType
+    {
+        TTL,
+        Text,
+        Unsupported
+    };
+
+    /** EventsTable of a recorded event channel */
+    struct EventTable
+    {
+        EventTableType type = EventTableType::Unsupported;
+        std::string name;
+        std::shared_ptr<AQNWB::NWB::EventsTable> table;
+    };
+
+    /** One EventTable per recorded event channel (indexed by the event channel index) */
+    std::vector<EventTable> eventTables;
+
+    /** EventsTable with the sync messages (start sample number of each stream for each recording) */
+    std::shared_ptr<AQNWB::NWB::EventsTable> syncMessagesTable;
+
+    /** Sync message received for the current recording, written when the recording stops */
+    struct SyncMessage
+    {
+        uint16 streamId;
+        int64 sampleNumber;
+        std::string text;
+    };
+    std::vector<SyncMessage> pendingSyncMessages;
+
+    /** Stream id of each ElectricalSeries, one per entry in recordingArrays */
+    std::vector<uint16> recordingStreamIds;
+
+    /** First recorded timestamp of each stream in the current recording */
+    std::map<uint16, double> streamStartTimes;
+
+    /** Set after the first failed or unsupported event write so that errors are only logged once per file */
+    bool eventErrorLogged = false;
+
+    /** Recording number and time range (in seconds) of the current recording */
+    int currentRecordingNumber = 0;
+    double recordingStartTime = 0.0;
+    double recordingStopTime = 0.0;
+    bool recordingHasData = false;
+
+    /** True once the timestamps reference time of the file was set (from the first recording of the file) */
+    bool referenceTimeSet = false;
+
+    /** Reusable buffers for converting float samples to int16 and for sample numbers */
+    std::vector<float> scaledBuffer;
+    std::vector<int16_t> intBuffer;
+    std::vector<int64> sampleNumberBuffer;
+
+    /** Set after the first failed data write so that errors are only logged once per file */
+    bool writeErrorLogged = false;
+
+    /** Interval for flushing the file during a recording, so that data is not lost if the GUI crashes */
+    static constexpr uint32 flushIntervalMs = 10000;
+
+    /** Time of the last flush (Time::getMillisecondCounter()) */
+    uint32 lastFlushTime = 0;
 
     /** The identifier for the current file (can be set externally) */
     String identifierText;
